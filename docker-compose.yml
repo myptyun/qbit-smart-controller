@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  qbit-controller:
+    build: .
+    container_name: qbit-smart-controller
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai
+    networks:
+      - qbit-network
+
+networks:
+  qbit-network:
+    driver: bridge
