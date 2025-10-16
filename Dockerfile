@@ -12,10 +12,31 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 安装系统依赖
 RUN apt-get update && apt-get install -y \
+    # 基础工具
     curl \
+    wget \
+    ca-certificates \
+    # Git版本管理
     git \
+    # 时区支持
     tzdata \
-    && rm -rf /var/lib/apt/lists/*
+    # 网络和SSL支持
+    openssl \
+    # 系统库
+    libc6 \
+    libssl3 \
+    libffi8 \
+    # Python编译依赖
+    build-essential \
+    python3-dev \
+    # 其他常用工具
+    procps \
+    htop \
+    nano \
+    vim \
+    # 清理缓存
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # 安装 Python 依赖
 COPY requirements.txt .
