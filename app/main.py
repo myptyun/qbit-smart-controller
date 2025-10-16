@@ -642,6 +642,7 @@ class QBittorrentManager:
             
             login_url = f"{instance_config['host']}/api/v2/auth/login"
             print(f"🔑 尝试登录: {login_url}")
+            print(f"🔑 用户名: {instance_config['username']}")
             
             async with session.post(login_url, data=login_data) as response:
                 login_content = await response.text()
@@ -650,19 +651,42 @@ class QBittorrentManager:
                 if response.status == 200:
                     # 获取传输信息测试连接
                     transfer_url = f"{instance_config['host']}/api/v2/transfer/info"
+                    print(f"📊 测试传输信息: {transfer_url}")
+                    
                     async with session.get(transfer_url) as transfer_response:
+                        transfer_content = await transfer_response.text()
+                        print(f"📊 传输响应: {transfer_response.status} - {transfer_content[:200]}...")
+                        
                         if transfer_response.status == 200:
                             return {
                                 "success": True,
                                 "status": "connected",
                                 "message": "连接成功"
                             }
+                        elif transfer_response.status == 403:
+                            return {
+                                "success": False,
+                                "status": "forbidden",
+                                "message": f"403 禁止访问 - 可能原因：1)IP被限制 2)权限不足 3)需要重新登录。响应: {transfer_content}"
+                            }
                         else:
                             return {
                                 "success": False,
                                 "status": "error", 
-                                "message": f"数据传输失败: {transfer_response.status}"
+                                "message": f"数据传输失败: {transfer_response.status} - {transfer_content}"
                             }
+                elif response.status == 403:
+                    return {
+                        "success": False,
+                        "status": "auth_forbidden",
+                        "message": f"403 认证被禁止 - 可能原因：1)用户名密码错误 2)IP被限制 3)Web UI未启用。响应: {login_content}"
+                    }
+                elif response.status == 401:
+                    return {
+                        "success": False,
+                        "status": "auth_failed",
+                        "message": f"401 认证失败 - 用户名或密码错误。响应: {login_content}"
+                    }
                 else:
                     return {
                         "success": False,
@@ -1011,6 +1035,102 @@ async def test_qbit_connection(instance_index: int):
     instance = instances[instance_index]
     result = await qbit_manager.test_connection(instance)
     return result
+
+@app.get("/api/debug/qbit/{instance_index}")
+async def debug_qbit_connection(instance_index: int):
+    """调试qBittorrent连接 - 详细诊断"""
+    print(f"🔧 调试QB连接: {instance_index}")
+    config = config_manager.load_config()
+    instances = config.get("qbittorrent_instances", [])
+    
+    if instance_index < 0 or instance_index >= len(instances):
+        raise HTTPException(status_code=404, detail="实例不存在")
+    
+    instance = instances[instance_index]
+    debug_info = {
+        "instance_config": {
+            "name": instance["name"],
+            "host": instance["host"],
+            "username": instance["username"],
+            "password": "***"  # 隐藏密码
+        },
+        "tests": []
+    }
+    
+    try:
+        # 测试1: 基本连接
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(instance["host"], timeout=5) as response:
+                    debug_info["tests"].append({
+                        "test": "基本连接",
+                        "url": instance["host"],
+                        "status": response.status,
+                        "success": response.status == 200,
+                        "message": f"HTTP {response.status}"
+                    })
+            except Exception as e:
+                debug_info["tests"].append({
+                    "test": "基本连接",
+                    "url": instance["host"],
+                    "status": "error",
+                    "success": False,
+                    "message": str(e)
+                })
+            
+            # 测试2: 登录
+            try:
+                login_data = {
+                    "username": instance["username"],
+                    "password": instance["password"]
+                }
+                login_url = f"{instance['host']}/api/v2/auth/login"
+                async with session.post(login_url, data=login_data, timeout=10) as response:
+                    content = await response.text()
+                    debug_info["tests"].append({
+                        "test": "登录认证",
+                        "url": login_url,
+                        "status": response.status,
+                        "success": response.status == 200,
+                        "message": f"HTTP {response.status} - {content[:100]}",
+                        "response_headers": dict(response.headers)
+                    })
+            except Exception as e:
+                debug_info["tests"].append({
+                    "test": "登录认证",
+                    "url": login_url,
+                    "status": "error",
+                    "success": False,
+                    "message": str(e)
+                })
+            
+            # 测试3: 传输信息
+            try:
+                transfer_url = f"{instance['host']}/api/v2/transfer/info"
+                async with session.get(transfer_url, timeout=10) as response:
+                    content = await response.text()
+                    debug_info["tests"].append({
+                        "test": "传输信息",
+                        "url": transfer_url,
+                        "status": response.status,
+                        "success": response.status == 200,
+                        "message": f"HTTP {response.status} - {content[:100]}",
+                        "response_headers": dict(response.headers)
+                    })
+            except Exception as e:
+                debug_info["tests"].append({
+                    "test": "传输信息",
+                    "url": transfer_url,
+                    "status": "error",
+                    "success": False,
+                    "message": str(e)
+                })
+    
+    except Exception as e:
+        debug_info["error"] = str(e)
+    
+    return debug_info
 
 @app.get("/api/debug/config")
 async def debug_config():
