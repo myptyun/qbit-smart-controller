@@ -601,6 +601,7 @@ class QBittorrentManager:
         self.config_manager = config_manager
         self.session = None
         self._session_created = False
+        self.cookies = {}  # 存储每个实例的认证 Cookie
     
     async def get_session(self):
         """获取或创建 HTTP 会话（连接池复用）"""
@@ -627,12 +628,11 @@ class QBittorrentManager:
             logger.debug("✅ qBittorrent Manager HTTP 会话已创建")
         return self.session
     
-    async def test_connection(self, instance_config: dict):
-        """测试qBittorrent连接"""
+    async def login_to_qbit(self, instance_config: dict) -> bool:
+        """登录到 qBittorrent 并保存 Cookie"""
         try:
-            print(f"🔍 测试QB连接: {instance_config['host']}")
-            
             session = await self.get_session()
+            instance_key = f"{instance_config['host']}_{instance_config['username']}"
             
             # 登录
             login_data = {
@@ -641,57 +641,77 @@ class QBittorrentManager:
             }
             
             login_url = f"{instance_config['host']}/api/v2/auth/login"
-            print(f"🔑 尝试登录: {login_url}")
-            print(f"🔑 用户名: {instance_config['username']}")
+            print(f"🔑 登录 qBittorrent: {login_url}")
             
             async with session.post(login_url, data=login_data) as response:
                 login_content = await response.text()
                 print(f"🔑 登录响应: {response.status} - {login_content}")
                 
                 if response.status == 200:
-                    # 获取传输信息测试连接
-                    transfer_url = f"{instance_config['host']}/api/v2/transfer/info"
-                    print(f"📊 测试传输信息: {transfer_url}")
-                    
-                    async with session.get(transfer_url) as transfer_response:
-                        transfer_content = await transfer_response.text()
-                        print(f"📊 传输响应: {transfer_response.status} - {transfer_content[:200]}...")
-                        
-                        if transfer_response.status == 200:
-                            return {
-                                "success": True,
-                                "status": "connected",
-                                "message": "连接成功"
-                            }
-                        elif transfer_response.status == 403:
-                            return {
-                                "success": False,
-                                "status": "forbidden",
-                                "message": f"403 禁止访问 - 可能原因：1)IP被限制 2)权限不足 3)需要重新登录。响应: {transfer_content}"
-                            }
-                        else:
-                            return {
-                                "success": False,
-                                "status": "error", 
-                                "message": f"数据传输失败: {transfer_response.status} - {transfer_content}"
-                            }
-                elif response.status == 403:
+                    # 提取 Cookie
+                    cookies = response.cookies
+                    self.cookies[instance_key] = cookies
+                    print(f"✅ 登录成功，保存 Cookie: {len(cookies)} 个")
+                    return True
+                else:
+                    print(f"❌ 登录失败: {response.status} - {login_content}")
+                    return False
+        except Exception as e:
+            print(f"❌ 登录异常: {e}")
+            return False
+    
+    async def test_connection(self, instance_config: dict):
+        """测试qBittorrent连接"""
+        try:
+            print(f"🔍 测试QB连接: {instance_config['host']}")
+            
+            # 先登录获取 Cookie
+            login_success = await self.login_to_qbit(instance_config)
+            if not login_success:
+                return {
+                    "success": False,
+                    "status": "auth_failed",
+                    "message": "登录失败，无法获取认证 Cookie"
+                }
+            
+            session = await self.get_session()
+            instance_key = f"{instance_config['host']}_{instance_config['username']}"
+            cookies = self.cookies.get(instance_key)
+            
+            if not cookies:
+                return {
+                    "success": False,
+                    "status": "auth_failed",
+                    "message": "未找到认证 Cookie"
+                }
+            
+            # 使用 Cookie 测试传输信息
+            transfer_url = f"{instance_config['host']}/api/v2/transfer/info"
+            print(f"📊 测试传输信息: {transfer_url}")
+            
+            async with session.get(transfer_url, cookies=cookies) as transfer_response:
+                transfer_content = await transfer_response.text()
+                print(f"📊 传输响应: {transfer_response.status} - {transfer_content[:200]}...")
+                
+                if transfer_response.status == 200:
                     return {
-                        "success": False,
-                        "status": "auth_forbidden",
-                        "message": f"403 认证被禁止 - 可能原因：1)用户名密码错误 2)IP被限制 3)Web UI未启用。响应: {login_content}"
+                        "success": True,
+                        "status": "connected",
+                        "message": "连接成功"
                     }
-                elif response.status == 401:
+                elif transfer_response.status == 403:
+                    # Cookie 可能过期，清除并重试
+                    del self.cookies[instance_key]
                     return {
                         "success": False,
-                        "status": "auth_failed",
-                        "message": f"401 认证失败 - 用户名或密码错误。响应: {login_content}"
+                        "status": "forbidden",
+                        "message": f"403 禁止访问 - Cookie 可能过期，请重试"
                     }
                 else:
                     return {
                         "success": False,
-                        "status": "auth_failed",
-                        "message": f"认证失败: {response.status} - {login_content}"
+                        "status": "error", 
+                        "message": f"数据传输失败: {transfer_response.status} - {transfer_content}"
                     }
         except Exception as e:
             error_msg = f"连接失败: {str(e)}"
@@ -708,62 +728,68 @@ class QBittorrentManager:
             print(f"🔍 采集QB状态: {instance_config['name']}")
             
             session = await self.get_session()
+            instance_key = f"{instance_config['host']}_{instance_config['username']}"
             
-            # 登录
-            login_data = {
-                "username": instance_config["username"],
-                "password": instance_config["password"]
-            }
-            
-            login_url = f"{instance_config['host']}/api/v2/auth/login"
-            async with session.post(login_url, data=login_data) as response:
-                if response.status != 200:
-                    error_msg = f"认证失败: {response.status}"
-                    print(f"❌ {instance_config['name']} - {error_msg}")
+            # 检查是否有有效的 Cookie
+            cookies = self.cookies.get(instance_key)
+            if not cookies:
+                # 尝试登录获取 Cookie
+                login_success = await self.login_to_qbit(instance_config)
+                if not login_success:
                     return {
                         "success": False,
                         "instance_name": instance_config["name"],
                         "status": "auth_failed",
+                        "error": "登录失败"
+                    }
+                cookies = self.cookies.get(instance_key)
+            
+            # 获取传输信息
+            transfer_url = f"{instance_config['host']}/api/v2/transfer/info"
+            async with session.get(transfer_url, cookies=cookies) as transfer_response:
+                if transfer_response.status == 200:
+                    transfer_info = await transfer_response.json()
+                    
+                    # 获取种子列表
+                    torrents_url = f"{instance_config['host']}/api/v2/torrents/info"
+                    async with session.get(torrents_url, cookies=cookies) as torrents_response:
+                        torrents_info = await torrents_response.json() if torrents_response.status == 200 else []
+                    
+                    active_downloads = len([t for t in torrents_info if t.get("state") == "downloading"])
+                    active_seeds = len([t for t in torrents_info if t.get("state") == "uploading"])
+                    
+                    status_data = {
+                        "success": True,
+                        "instance_name": instance_config["name"],
+                        "status": "online",
+                        "download_speed": transfer_info.get("dl_info_speed", 0),
+                        "upload_speed": transfer_info.get("up_info_speed", 0),
+                        "active_downloads": active_downloads,
+                        "active_seeds": active_seeds,
+                        "total_torrents": len(torrents_info),
+                        "last_update": datetime.now().isoformat()
+                    }
+                    
+                    print(f"✅ {instance_config['name']} - 在线, 下载: {status_data['download_speed']} B/s, 上传: {status_data['upload_speed']} B/s")
+                    return status_data
+                elif transfer_response.status == 403:
+                    # Cookie 过期，清除并重试
+                    del self.cookies[instance_key]
+                    return {
+                        "success": False,
+                        "instance_name": instance_config["name"],
+                        "status": "auth_failed",
+                        "error": "认证过期，请重试"
+                    }
+                else:
+                    error_msg = f"数据传输失败: {transfer_response.status}"
+                    print(f"❌ {instance_config['name']} - {error_msg}")
+                    return {
+                        "success": False,
+                        "instance_name": instance_config["name"],
+                        "status": "error",
                         "error": error_msg
                     }
-                
-                # 获取传输信息
-                transfer_url = f"{instance_config['host']}/api/v2/transfer/info"
-                async with session.get(transfer_url) as transfer_response:
-                    if transfer_response.status == 200:
-                        transfer_info = await transfer_response.json()
-                        
-                        # 获取种子列表
-                        torrents_url = f"{instance_config['host']}/api/v2/torrents/info"
-                        async with session.get(torrents_url) as torrents_response:
-                            torrents_info = await torrents_response.json() if torrents_response.status == 200 else []
-                        
-                        active_downloads = len([t for t in torrents_info if t.get("state") == "downloading"])
-                        active_seeds = len([t for t in torrents_info if t.get("state") == "uploading"])
-                        
-                        status_data = {
-                            "success": True,
-                            "instance_name": instance_config["name"],
-                            "status": "online",
-                            "download_speed": transfer_info.get("dl_info_speed", 0),
-                            "upload_speed": transfer_info.get("up_info_speed", 0),
-                            "active_downloads": active_downloads,
-                            "active_seeds": active_seeds,
-                            "total_torrents": len(torrents_info),
-                            "last_update": datetime.now().isoformat()
-                        }
-                        
-                        print(f"✅ {instance_config['name']} - 在线, 下载: {status_data['download_speed']} B/s, 上传: {status_data['upload_speed']} B/s")
-                        return status_data
-                    else:
-                        error_msg = f"数据传输失败: {transfer_response.status}"
-                        print(f"❌ {instance_config['name']} - {error_msg}")
-                        return {
-                            "success": False,
-                            "instance_name": instance_config["name"],
-                            "status": "error",
-                            "error": error_msg
-                        }
         except Exception as e:
             error_msg = str(e)
             print(f"❌ {instance_config['name']} - 采集异常: {error_msg}")
@@ -780,38 +806,44 @@ class QBittorrentManager:
             print(f"🎚️ 设置速度限制: {instance_config['name']} - 下载: {download_limit} KB/s, 上传: {upload_limit} KB/s")
             
             session = await self.get_session()
+            instance_key = f"{instance_config['host']}_{instance_config['username']}"
             
-            # 登录
-            login_data = {
-                "username": instance_config["username"],
-                "password": instance_config["password"]
-            }
-            
-            login_url = f"{instance_config['host']}/api/v2/auth/login"
-            async with session.post(login_url, data=login_data) as response:
-                if response.status != 200:
+            # 检查是否有有效的 Cookie
+            cookies = self.cookies.get(instance_key)
+            if not cookies:
+                # 尝试登录获取 Cookie
+                login_success = await self.login_to_qbit(instance_config)
+                if not login_success:
                     print(f"❌ {instance_config['name']} - 登录失败")
                     return False
-                
-                # 设置全局下载限制
-                dl_limit_url = f"{instance_config['host']}/api/v2/transfer/setDownloadLimit"
-                dl_limit_data = {"limit": download_limit * 1024}  # 转换为 bytes/s
-                async with session.post(dl_limit_url, data=dl_limit_data) as dl_response:
-                    dl_success = dl_response.status == 200
-                
-                # 设置全局上传限制
-                up_limit_url = f"{instance_config['host']}/api/v2/transfer/setUploadLimit"
-                up_limit_data = {"limit": upload_limit * 1024}  # 转换为 bytes/s
-                async with session.post(up_limit_url, data=up_limit_data) as up_response:
-                    up_success = up_response.status == 200
-                
-                success = dl_success and up_success
-                if success:
-                    print(f"✅ {instance_config['name']} - 速度限制设置成功")
-                else:
-                    print(f"❌ {instance_config['name']} - 速度限制设置失败")
-                
-                return success
+                cookies = self.cookies.get(instance_key)
+            
+            # 设置全局下载限制
+            dl_limit_url = f"{instance_config['host']}/api/v2/transfer/setDownloadLimit"
+            dl_limit_data = {"limit": download_limit * 1024}  # 转换为 bytes/s
+            async with session.post(dl_limit_url, data=dl_limit_data, cookies=cookies) as dl_response:
+                dl_success = dl_response.status == 200
+                if not dl_success:
+                    print(f"❌ 下载限制设置失败: {dl_response.status}")
+            
+            # 设置全局上传限制
+            up_limit_url = f"{instance_config['host']}/api/v2/transfer/setUploadLimit"
+            up_limit_data = {"limit": upload_limit * 1024}  # 转换为 bytes/s
+            async with session.post(up_limit_url, data=up_limit_data, cookies=cookies) as up_response:
+                up_success = up_response.status == 200
+                if not up_success:
+                    print(f"❌ 上传限制设置失败: {up_response.status}")
+            
+            success = dl_success and up_success
+            if success:
+                print(f"✅ {instance_config['name']} - 速度限制设置成功")
+            else:
+                print(f"❌ {instance_config['name']} - 速度限制设置失败")
+                # 如果失败，可能是 Cookie 过期，清除它
+                if dl_response.status == 403 or up_response.status == 403:
+                    del self.cookies[instance_key]
+            
+            return success
         except Exception as e:
             print(f"❌ {instance_config['name']} - 设置速度限制异常: {e}")
             return False
@@ -1088,14 +1120,31 @@ async def debug_qbit_connection(instance_index: int):
                 login_url = f"{instance['host']}/api/v2/auth/login"
                 async with session.post(login_url, data=login_data, timeout=10) as response:
                     content = await response.text()
+                    cookies = response.cookies
                     debug_info["tests"].append({
                         "test": "登录认证",
                         "url": login_url,
                         "status": response.status,
                         "success": response.status == 200,
                         "message": f"HTTP {response.status} - {content[:100]}",
+                        "cookies_received": len(cookies),
+                        "cookie_names": [cookie.key for cookie in cookies],
                         "response_headers": dict(response.headers)
                     })
+                    
+                    # 如果登录成功，测试带 Cookie 的请求
+                    if response.status == 200 and cookies:
+                        transfer_url = f"{instance['host']}/api/v2/transfer/info"
+                        async with session.get(transfer_url, cookies=cookies, timeout=10) as transfer_response:
+                            transfer_content = await transfer_response.text()
+                            debug_info["tests"].append({
+                                "test": "带Cookie的传输信息",
+                                "url": transfer_url,
+                                "status": transfer_response.status,
+                                "success": transfer_response.status == 200,
+                                "message": f"HTTP {transfer_response.status} - {transfer_content[:100]}",
+                                "response_headers": dict(transfer_response.headers)
+                            })
             except Exception as e:
                 debug_info["tests"].append({
                     "test": "登录认证",
@@ -1105,27 +1154,6 @@ async def debug_qbit_connection(instance_index: int):
                     "message": str(e)
                 })
             
-            # 测试3: 传输信息
-            try:
-                transfer_url = f"{instance['host']}/api/v2/transfer/info"
-                async with session.get(transfer_url, timeout=10) as response:
-                    content = await response.text()
-                    debug_info["tests"].append({
-                        "test": "传输信息",
-                        "url": transfer_url,
-                        "status": response.status,
-                        "success": response.status == 200,
-                        "message": f"HTTP {response.status} - {content[:100]}",
-                        "response_headers": dict(response.headers)
-                    })
-            except Exception as e:
-                debug_info["tests"].append({
-                    "test": "传输信息",
-                    "url": transfer_url,
-                    "status": "error",
-                    "success": False,
-                    "message": str(e)
-                })
     
     except Exception as e:
         debug_info["error"] = str(e)
