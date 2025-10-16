@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制应用代码
 COPY app/ ./app/
+COPY version.py ./
+COPY test_qb_simple.py ./
+COPY test_qb_connection.py ./
 
 # 创建必要的目录
 RUN mkdir -p /app/data/logs /app/data/config /app/config
