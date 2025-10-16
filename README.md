@@ -57,6 +57,13 @@
 └──────────────────┘      └──────────────────┘
 ```
 
+## 📚 文档导航
+
+- **[⚡ 更新指南](UPDATE_GUIDE.md)** - 如何在 Debian 上更新项目（推荐）
+- [🚀 部署指南](deploy_debian.sh) - 首次部署脚本
+- [📤 GitHub 推送指南](GITHUB_PUSH_GUIDE.md) - 如何推送到 GitHub
+- [📋 更新日志](CHANGELOG.md) - 版本更新记录
+
 ## 🚀 快速开始
 
 ### 前置要求
@@ -124,6 +131,37 @@ docker-compose down
 ### 4. 访问界面
 
 打开浏览器访问：`http://localhost:5000`
+
+## 🔄 更新项目
+
+### 快速更新（推荐）
+
+适用于日常代码更新：
+
+```bash
+cd ~/qbit-smart-controller
+./quick_update.sh
+```
+
+### 完整更新
+
+适用于有 Docker 配置或依赖变更：
+
+```bash
+cd ~/qbit-smart-controller
+./update.sh
+```
+
+### 完全重置
+
+遇到问题时使用：
+
+```bash
+cd ~/qbit-smart-controller
+./reset.sh
+```
+
+**详细说明请查看：[更新指南](UPDATE_GUIDE.md)**
 
 ## 📖 详细说明
 
