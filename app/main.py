@@ -950,26 +950,51 @@ class QBittorrentManager:
             # 设置全局下载限制
             dl_limit_url = f"{instance_config['host']}/api/v2/transfer/setDownloadLimit"
             dl_limit_data = {"limit": download_limit * 1024}  # 转换为 bytes/s
-            async with session.post(dl_limit_url, data=dl_limit_data, cookies=cookies) as dl_response:
-                dl_success = dl_response.status == 200
-                if not dl_success:
-                    print(f"❌ 下载限制设置失败: {dl_response.status}")
+            
+            dl_success = False
+            dl_error = ""
+            try:
+                async with session.post(dl_limit_url, data=dl_limit_data, cookies=cookies) as dl_response:
+                    dl_success = dl_response.status == 200
+                    if not dl_success:
+                        dl_error = f"HTTP {dl_response.status}"
+                        response_text = await dl_response.text()
+                        logger.error(f"❌ {instance_config['name']} - 下载限制设置失败: {dl_error}, 响应: {response_text}")
+            except Exception as e:
+                dl_error = f"请求异常: {str(e)}"
+                logger.error(f"❌ {instance_config['name']} - 下载限制请求异常: {e}")
             
             # 设置全局上传限制
             up_limit_url = f"{instance_config['host']}/api/v2/transfer/setUploadLimit"
             up_limit_data = {"limit": upload_limit * 1024}  # 转换为 bytes/s
-            async with session.post(up_limit_url, data=up_limit_data, cookies=cookies) as up_response:
-                up_success = up_response.status == 200
-                if not up_success:
-                    print(f"❌ 上传限制设置失败: {up_response.status}")
+            
+            up_success = False
+            up_error = ""
+            try:
+                async with session.post(up_limit_url, data=up_limit_data, cookies=cookies) as up_response:
+                    up_success = up_response.status == 200
+                    if not up_success:
+                        up_error = f"HTTP {up_response.status}"
+                        response_text = await up_response.text()
+                        logger.error(f"❌ {instance_config['name']} - 上传限制设置失败: {up_error}, 响应: {response_text}")
+            except Exception as e:
+                up_error = f"请求异常: {str(e)}"
+                logger.error(f"❌ {instance_config['name']} - 上传限制请求异常: {e}")
             
             success = dl_success and up_success
             if success:
                 logger.info(f"✅ {instance_config['name']} - 速度限制设置成功")
             else:
-                logger.error(f"❌ {instance_config['name']} - 速度限制设置失败")
+                error_details = []
+                if not dl_success:
+                    error_details.append(f"下载: {dl_error}")
+                if not up_success:
+                    error_details.append(f"上传: {up_error}")
+                
+                logger.error(f"❌ {instance_config['name']} - 速度限制设置失败 - {', '.join(error_details)}")
+                
                 # 如果失败，可能是 Cookie 过期，清除缓存
-                if dl_response.status == 403 or up_response.status == 403:
+                if "403" in dl_error or "403" in up_error:
                     if instance_key in self.cookies:
                         del self.cookies[instance_key]
                     if instance_key in self.sid_cache:
@@ -978,7 +1003,9 @@ class QBittorrentManager:
             
             return success
         except Exception as e:
-            print(f"❌ {instance_config['name']} - 设置速度限制异常: {e}")
+            logger.error(f"❌ {instance_config['name']} - 设置速度限制异常: {e}")
+            import traceback
+            logger.error(f"❌ 异常详情: {traceback.format_exc()}")
             return False
     
     async def close(self):
