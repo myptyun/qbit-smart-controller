@@ -45,9 +45,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制应用代码
 COPY app/ ./app/
 COPY version.py ./
-COPY test_qb_simple.py ./
-COPY test_qb_connection.py ./
-COPY test_qb_container.py ./
 COPY .git/ ./.git/
 
 # 生成版本信息文件（在构建时）
