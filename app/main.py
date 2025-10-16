@@ -177,13 +177,15 @@ class LuckyMonitor:
                 force_close=False,  # 复用连接
                 enable_cleanup_closed=True
             )
+            # 禁用代理，避免代理问题影响Lucky设备连接
             self.session = aiohttp.ClientSession(
                 timeout=timeout,
                 connector=connector,
-                raise_for_status=False
+                raise_for_status=False,
+                trust_env=False  # 不信任环境变量中的代理设置
             )
             self._session_created = True
-            logger.debug("✅ Lucky Monitor HTTP 会话已创建")
+            logger.debug("✅ Lucky Monitor HTTP 会话已创建（已禁用代理）")
         return self.session
     
     async def test_connection(self, api_url: str):
@@ -619,13 +621,15 @@ class QBittorrentManager:
                 force_close=False,
                 enable_cleanup_closed=True
             )
+            # 禁用代理，避免代理问题影响qBittorrent连接
             self.session = aiohttp.ClientSession(
                 timeout=timeout,
                 connector=connector,
-                raise_for_status=False
+                raise_for_status=False,
+                trust_env=False  # 不信任环境变量中的代理设置
             )
             self._session_created = True
-            logger.debug("✅ qBittorrent Manager HTTP 会话已创建")
+            logger.debug("✅ qBittorrent Manager HTTP 会话已创建（已禁用代理）")
         return self.session
     
     async def login_to_qbit(self, instance_config: dict) -> bool:
@@ -634,7 +638,7 @@ class QBittorrentManager:
             session = await self.get_session()
             instance_key = f"{instance_config['host']}_{instance_config['username']}"
             
-            # 登录
+            # 登录 - 使用表单格式 (application/x-www-form-urlencoded)
             login_data = {
                 "username": instance_config["username"],
                 "password": instance_config["password"]
@@ -643,10 +647,18 @@ class QBittorrentManager:
             login_url = f"{instance_config['host']}/api/v2/auth/login"
             print(f"🔑 登录 qBittorrent: {login_url}")
             print(f"🔑 用户名: {instance_config['username']}")
+            print(f"🔑 请求数据: username={instance_config['username']}&password=***")
             
-            async with session.post(login_url, data=login_data) as response:
+            # 显式设置 Content-Type 为 application/x-www-form-urlencoded
+            headers = {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+            
+            # 使用 data 参数发送表单数据
+            async with session.post(login_url, data=login_data, headers=headers) as response:
                 login_content = await response.text()
-                print(f"🔑 登录响应: {response.status} - {login_content}")
+                print(f"🔑 登录响应状态: {response.status}")
+                print(f"🔑 登录响应内容: {login_content}")
                 print(f"🔑 响应头: {dict(response.headers)}")
                 
                 if response.status == 200:
