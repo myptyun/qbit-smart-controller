@@ -48,7 +48,6 @@ COPY version.py ./
 COPY test_qb_simple.py ./
 COPY test_qb_connection.py ./
 COPY test_qb_container.py ./
-COPY .git/ ./.git/
 
 # 创建必要的目录
 RUN mkdir -p /app/data/logs /app/data/config /app/config
@@ -61,4 +60,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 EXPOSE 5000
 
 # 运行应用
+
 CMD ["python", "-u", "app/main.py"]
