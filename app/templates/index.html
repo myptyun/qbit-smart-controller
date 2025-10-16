@@ -943,21 +943,38 @@
 
         // 配置管理函数
         function showLuckyDeviceModal() {
+            const form = document.getElementById('lucky-device-form');
             const modal = new bootstrap.Modal(document.getElementById('luckyDeviceModal'));
-            document.getElementById('lucky-device-form').reset();
+            
+            // 清除表单和编辑标记
+            form.reset();
+            delete form.dataset.editIndex;
+            
+            // 设置默认值
             document.getElementById('device-weight').value = '1.0';
             document.getElementById('device-enabled').checked = true;
+            
             modal.show();
         }
 
         function showQbitInstanceModal() {
+            const form = document.getElementById('qbit-instance-form');
             const modal = new bootstrap.Modal(document.getElementById('qbitInstanceModal'));
-            document.getElementById('qbit-instance-form').reset();
+            
+            // 清除表单和编辑标记
+            form.reset();
+            delete form.dataset.editIndex;
+            
+            // 设置默认值
             document.getElementById('instance-enabled').checked = true;
+            
             modal.show();
         }
 
         async function saveLuckyDevice() {
+            const form = document.getElementById('lucky-device-form');
+            const editIndex = form.dataset.editIndex;
+            
             const device = {
                 name: document.getElementById('device-name').value,
                 api_url: document.getElementById('device-api-url').value,
@@ -967,18 +984,33 @@
             };
 
             try {
+                let devices = [...(window.dashboard.config.lucky_devices || [])];
+                
+                // 检查是否是编辑模式
+                if (editIndex !== undefined && editIndex !== null && editIndex !== '') {
+                    // 编辑模式：更新现有设备
+                    devices[parseInt(editIndex)] = device;
+                    window.dashboard.addLog(`编辑 Lucky 设备: ${device.name}`, 'info');
+                } else {
+                    // 添加模式：新增设备
+                    devices.push(device);
+                    window.dashboard.addLog(`添加 Lucky 设备: ${device.name}`, 'info');
+                }
+                
                 const response = await fetch('/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         ...window.dashboard.config,
-                        lucky_devices: [...(window.dashboard.config.lucky_devices || []), device]
+                        lucky_devices: devices
                     })
                 });
 
                 if (response.ok) {
                     window.dashboard.addLog('Lucky 设备保存成功', 'success');
                     bootstrap.Modal.getInstance(document.getElementById('luckyDeviceModal')).hide();
+                    // 清除编辑标记
+                    delete form.dataset.editIndex;
                     await window.dashboard.loadConfig();
                 } else {
                     throw new Error('保存失败');
@@ -989,6 +1021,9 @@
         }
 
         async function saveQbitInstance() {
+            const form = document.getElementById('qbit-instance-form');
+            const editIndex = form.dataset.editIndex;
+            
             const instance = {
                 name: document.getElementById('instance-name').value,
                 host: document.getElementById('instance-host').value,
@@ -999,18 +1034,33 @@
             };
 
             try {
+                let instances = [...(window.dashboard.config.qbittorrent_instances || [])];
+                
+                // 检查是否是编辑模式
+                if (editIndex !== undefined && editIndex !== null && editIndex !== '') {
+                    // 编辑模式：更新现有实例
+                    instances[parseInt(editIndex)] = instance;
+                    window.dashboard.addLog(`编辑 qBittorrent 实例: ${instance.name}`, 'info');
+                } else {
+                    // 添加模式：新增实例
+                    instances.push(instance);
+                    window.dashboard.addLog(`添加 qBittorrent 实例: ${instance.name}`, 'info');
+                }
+                
                 const response = await fetch('/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         ...window.dashboard.config,
-                        qbittorrent_instances: [...(window.dashboard.config.qbittorrent_instances || []), instance]
+                        qbittorrent_instances: instances
                     })
                 });
 
                 if (response.ok) {
                     window.dashboard.addLog('qBittorrent 实例保存成功', 'success');
                     bootstrap.Modal.getInstance(document.getElementById('qbitInstanceModal')).hide();
+                    // 清除编辑标记
+                    delete form.dataset.editIndex;
                     await window.dashboard.loadConfig();
                 } else {
                     throw new Error('保存失败');

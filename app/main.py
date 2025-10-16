@@ -642,22 +642,40 @@ class QBittorrentManager:
             
             login_url = f"{instance_config['host']}/api/v2/auth/login"
             print(f"🔑 登录 qBittorrent: {login_url}")
+            print(f"🔑 用户名: {instance_config['username']}")
             
             async with session.post(login_url, data=login_data) as response:
                 login_content = await response.text()
                 print(f"🔑 登录响应: {response.status} - {login_content}")
+                print(f"🔑 响应头: {dict(response.headers)}")
                 
                 if response.status == 200:
-                    # 提取 Cookie
+                    # 提取 Cookie，特别是 SID
                     cookies = response.cookies
-                    self.cookies[instance_key] = cookies
-                    print(f"✅ 登录成功，保存 Cookie: {len(cookies)} 个")
-                    return True
+                    
+                    # 打印所有 Cookie
+                    print(f"🍪 收到 Cookie 数量: {len(cookies)}")
+                    for cookie in cookies:
+                        print(f"🍪 Cookie: {cookie.key} = {cookie.value}")
+                    
+                    # 检查是否有 SID Cookie
+                    sid_cookie = cookies.get('SID')
+                    if sid_cookie:
+                        self.cookies[instance_key] = cookies
+                        print(f"✅ 登录成功，SID: {sid_cookie.value[:20]}...")
+                        return True
+                    else:
+                        # 即使没有明确的 SID，如果登录成功也保存 Cookie
+                        self.cookies[instance_key] = cookies
+                        print(f"⚠️ 登录成功但未找到 SID Cookie，保存所有 Cookie")
+                        return True
                 else:
                     print(f"❌ 登录失败: {response.status} - {login_content}")
                     return False
         except Exception as e:
             print(f"❌ 登录异常: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     async def test_connection(self, instance_config: dict):
