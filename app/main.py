@@ -700,10 +700,34 @@ class QBittorrentManager:
                         print(f"⚠️ 登录成功但未找到 SID Cookie，保存所有 Cookie")
                         return True
                 else:
-                    print(f"❌ 登录失败: {response.status} - {login_content}")
+                    # 详细的错误处理
+                    error_msg = f"登录失败 (HTTP {response.status})"
+                    
+                    if response.status == 403:
+                        if "封禁" in login_content or "banned" in login_content.lower():
+                            error_msg = f"❌ IP地址已被封禁！原因：{login_content}"
+                            print(error_msg)
+                            print("💡 解决方法：")
+                            print("   1. 在qBittorrent中解除IP封禁")
+                            print("   2. 或重启qBittorrent服务清除封禁列表")
+                            print("   3. 检查用户名密码是否正确")
+                        else:
+                            error_msg = f"❌ 访问被禁止 (403)：{login_content}"
+                            print(error_msg)
+                            print("💡 可能原因：IP白名单限制或权限不足")
+                    elif response.status == 401:
+                        error_msg = f"❌ 认证失败 (401)：用户名或密码错误"
+                        print(error_msg)
+                        print(f"💡 当前用户名: {instance_config['username']}")
+                        print("💡 请检查用户名和密码是否正确")
+                    else:
+                        print(f"❌ 登录失败: HTTP {response.status}")
+                        print(f"❌ 响应内容: {login_content}")
+                    
                     return False
         except Exception as e:
             print(f"❌ 登录异常: {e}")
+            print(f"❌ 异常类型: {type(e).__name__}")
             import traceback
             traceback.print_exc()
             return False
@@ -719,7 +743,7 @@ class QBittorrentManager:
                 return {
                     "success": False,
                     "status": "auth_failed",
-                    "message": "登录失败，无法获取认证 Cookie"
+                    "message": "登录失败，请查看上方的详细错误信息"
                 }
             
             session = await self.get_session()
