@@ -603,7 +603,9 @@ class QBittorrentManager:
         self.config_manager = config_manager
         self.session = None
         self._session_created = False
-        self.cookies = {}  # 存储每个实例的认证 Cookie
+        self.cookies = {}  # 存储每个实例的认证 Cookie (持久化缓存)
+        self.sid_cache = {}  # SID缓存: {instance_key: {'sid': xxx, 'timestamp': xxx}}
+        self.sid_lifetime = 3600  # SID 生命周期（秒），默认1小时
     
     async def get_session(self):
         """获取或创建 HTTP 会话（连接池复用）"""
@@ -631,6 +633,40 @@ class QBittorrentManager:
             self._session_created = True
             logger.debug("✅ qBittorrent Manager HTTP 会话已创建（已禁用代理）")
         return self.session
+    
+    def _is_sid_valid(self, instance_key: str) -> bool:
+        """检查缓存的SID是否仍然有效"""
+        if instance_key not in self.sid_cache:
+            return False
+        
+        cache_entry = self.sid_cache[instance_key]
+        import time
+        age = time.time() - cache_entry.get('timestamp', 0)
+        
+        # 如果SID超过生命周期，视为过期
+        if age > self.sid_lifetime:
+            logger.debug(f"SID已过期 ({age:.0f}秒 > {self.sid_lifetime}秒)")
+            return False
+        
+        return True
+    
+    async def get_valid_cookies(self, instance_config: dict):
+        """获取有效的认证Cookie，如果缓存的SID有效则直接返回，否则重新登录"""
+        instance_key = f"{instance_config['host']}_{instance_config['username']}"
+        
+        # 检查是否有有效的缓存SID
+        if self._is_sid_valid(instance_key):
+            logger.debug(f"使用缓存的SID: {instance_key}")
+            return self.cookies.get(instance_key)
+        
+        # SID无效或不存在，需要重新登录
+        logger.info(f"SID无效或不存在，重新登录: {instance_config['name']}")
+        login_success = await self.login_to_qbit(instance_config)
+        
+        if login_success:
+            return self.cookies.get(instance_key)
+        else:
+            return None
     
     async def login_to_qbit(self, instance_config: dict) -> bool:
         """登录到 qBittorrent 并保存 Cookie"""
@@ -674,7 +710,14 @@ class QBittorrentManager:
                     sid_cookie = cookies.get('SID')
                     if sid_cookie:
                         self.cookies[instance_key] = cookies
-                        print(f"✅ 登录成功，SID: {sid_cookie.value[:20]}...")
+                        # 缓存SID和时间戳
+                        import time
+                        self.sid_cache[instance_key] = {
+                            'sid': sid_cookie.value,
+                            'timestamp': time.time()
+                        }
+                        print(f"✅ 登录成功，SID已缓存: {sid_cookie.value[:20]}...")
+                        logger.info(f"✅ {instance_config['name']} - 登录成功，SID已缓存")
                         return True
                     else:
                         # 检查 Set-Cookie 头
@@ -693,6 +736,13 @@ class QBittorrentManager:
                                 jar = CookieJar()
                                 jar.update_cookies({'SID': sid_value})
                                 self.cookies[instance_key] = jar
+                                # 缓存SID和时间戳
+                                import time
+                                self.sid_cache[instance_key] = {
+                                    'sid': sid_value,
+                                    'timestamp': time.time()
+                                }
+                                logger.info(f"✅ {instance_config['name']} - 登录成功，SID已缓存（从头部提取）")
                                 return True
                         
                         # 即使没有明确的 SID，如果登录成功也保存 Cookie
@@ -797,24 +847,19 @@ class QBittorrentManager:
     async def get_instance_status(self, instance_config: dict):
         """获取qBittorrent实例状态"""
         try:
-            print(f"🔍 采集QB状态: {instance_config['name']}")
+            logger.debug(f"🔍 采集QB状态: {instance_config['name']}")
             
             session = await self.get_session()
-            instance_key = f"{instance_config['host']}_{instance_config['username']}"
             
-            # 检查是否有有效的 Cookie
-            cookies = self.cookies.get(instance_key)
+            # 使用缓存机制获取有效的 Cookie
+            cookies = await self.get_valid_cookies(instance_config)
             if not cookies:
-                # 尝试登录获取 Cookie
-                login_success = await self.login_to_qbit(instance_config)
-                if not login_success:
-                    return {
-                        "success": False,
-                        "instance_name": instance_config["name"],
-                        "status": "auth_failed",
-                        "error": "登录失败"
-                    }
-                cookies = self.cookies.get(instance_key)
+                return {
+                    "success": False,
+                    "instance_name": instance_config["name"],
+                    "status": "auth_failed",
+                    "error": "登录失败，无法获取认证Cookie"
+                }
             
             # 获取传输信息
             transfer_url = f"{instance_config['host']}/api/v2/transfer/info"
@@ -842,11 +887,16 @@ class QBittorrentManager:
                         "last_update": datetime.now().isoformat()
                     }
                     
-                    print(f"✅ {instance_config['name']} - 在线, 下载: {status_data['download_speed']} B/s, 上传: {status_data['upload_speed']} B/s")
+                    logger.debug(f"✅ {instance_config['name']} - 在线, 下载: {status_data['download_speed']} B/s, 上传: {status_data['upload_speed']} B/s")
                     return status_data
                 elif transfer_response.status == 403:
-                    # Cookie 过期，清除并重试
-                    del self.cookies[instance_key]
+                    # Cookie 过期，清除缓存和Cookie
+                    instance_key = f"{instance_config['host']}_{instance_config['username']}"
+                    if instance_key in self.cookies:
+                        del self.cookies[instance_key]
+                    if instance_key in self.sid_cache:
+                        del self.sid_cache[instance_key]
+                    logger.warning(f"⚠️ {instance_config['name']} - Cookie已过期，已清除缓存")
                     return {
                         "success": False,
                         "instance_name": instance_config["name"],
@@ -875,20 +925,16 @@ class QBittorrentManager:
     async def set_speed_limits(self, instance_config: dict, download_limit: int, upload_limit: int) -> bool:
         """设置速度限制（KB/s）"""
         try:
-            print(f"🎚️ 设置速度限制: {instance_config['name']} - 下载: {download_limit} KB/s, 上传: {upload_limit} KB/s")
+            logger.info(f"🎚️ 设置速度限制: {instance_config['name']} - 下载: {download_limit} KB/s, 上传: {upload_limit} KB/s")
             
             session = await self.get_session()
             instance_key = f"{instance_config['host']}_{instance_config['username']}"
             
-            # 检查是否有有效的 Cookie
-            cookies = self.cookies.get(instance_key)
+            # 使用缓存机制获取有效的 Cookie
+            cookies = await self.get_valid_cookies(instance_config)
             if not cookies:
-                # 尝试登录获取 Cookie
-                login_success = await self.login_to_qbit(instance_config)
-                if not login_success:
-                    print(f"❌ {instance_config['name']} - 登录失败")
-                    return False
-                cookies = self.cookies.get(instance_key)
+                logger.error(f"❌ {instance_config['name']} - 无法获取有效Cookie")
+                return False
             
             # 设置全局下载限制
             dl_limit_url = f"{instance_config['host']}/api/v2/transfer/setDownloadLimit"
@@ -908,12 +954,16 @@ class QBittorrentManager:
             
             success = dl_success and up_success
             if success:
-                print(f"✅ {instance_config['name']} - 速度限制设置成功")
+                logger.info(f"✅ {instance_config['name']} - 速度限制设置成功")
             else:
-                print(f"❌ {instance_config['name']} - 速度限制设置失败")
-                # 如果失败，可能是 Cookie 过期，清除它
+                logger.error(f"❌ {instance_config['name']} - 速度限制设置失败")
+                # 如果失败，可能是 Cookie 过期，清除缓存
                 if dl_response.status == 403 or up_response.status == 403:
-                    del self.cookies[instance_key]
+                    if instance_key in self.cookies:
+                        del self.cookies[instance_key]
+                    if instance_key in self.sid_cache:
+                        del self.sid_cache[instance_key]
+                    logger.warning(f"⚠️ {instance_config['name']} - Cookie已过期，已清除缓存")
             
             return success
         except Exception as e:
