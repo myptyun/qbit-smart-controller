@@ -980,69 +980,125 @@ class QBittorrentManager:
                 return {
                     "success": False,
                     "instance_name": instance_config["name"],
-                    "status": "auth_failed",
-                    "error": "登录失败，无法获取认证Cookie"
+                    "status": "offline",
+                    "error": "认证失败",
+                    "download_speed": 0,
+                    "upload_speed": 0,
+                    "active_downloads": 0,
+                    "active_seeds": 0,
+                    "total_torrents": 0,
+                    "last_update": datetime.now().isoformat()
                 }
             
-            # 获取传输信息
+            # 获取传输信息 - 设置较短的超时时间
             transfer_url = f"{instance_config['host']}/api/v2/transfer/info"
-            async with session.get(transfer_url, cookies=cookies) as transfer_response:
-                if transfer_response.status == 200:
-                    transfer_info = await transfer_response.json()
-                    
-                    # 获取种子列表
-                    torrents_url = f"{instance_config['host']}/api/v2/torrents/info"
-                    async with session.get(torrents_url, cookies=cookies) as torrents_response:
-                        torrents_info = await torrents_response.json() if torrents_response.status == 200 else []
-                    
-                    active_downloads = len([t for t in torrents_info if t.get("state") == "downloading"])
-                    active_seeds = len([t for t in torrents_info if t.get("state") == "uploading"])
-                    
-                    status_data = {
-                        "success": True,
-                        "instance_name": instance_config["name"],
-                        "status": "online",
-                        "download_speed": transfer_info.get("dl_info_speed", 0),
-                        "upload_speed": transfer_info.get("up_info_speed", 0),
-                        "active_downloads": active_downloads,
-                        "active_seeds": active_seeds,
-                        "total_torrents": len(torrents_info),
-                        "last_update": datetime.now().isoformat()
-                    }
-                    
-                    logger.debug(f"✅ {instance_config['name']} - 在线, 下载: {status_data['download_speed']} B/s, 上传: {status_data['upload_speed']} B/s")
-                    return status_data
-                elif transfer_response.status == 403:
-                    # Cookie 过期，清除缓存和Cookie
-                    instance_key = f"{instance_config['host']}_{instance_config['username']}"
-                    if instance_key in self.cookies:
-                        del self.cookies[instance_key]
-                    if instance_key in self.sid_cache:
-                        del self.sid_cache[instance_key]
-                    logger.warning(f"⚠️ {instance_config['name']} - Cookie已过期，已清除缓存")
-                    return {
-                        "success": False,
-                        "instance_name": instance_config["name"],
-                        "status": "auth_failed",
-                        "error": "认证过期，请重试"
-                    }
-                else:
-                    error_msg = f"数据传输失败: {transfer_response.status}"
-                    print(f"❌ {instance_config['name']} - {error_msg}")
-                    return {
-                        "success": False,
-                        "instance_name": instance_config["name"],
-                        "status": "error",
-                        "error": error_msg
-                    }
+            try:
+                async with session.get(transfer_url, cookies=cookies, timeout=aiohttp.ClientTimeout(total=5)) as transfer_response:
+                    if transfer_response.status == 200:
+                        transfer_info = await transfer_response.json()
+                        
+                        # 获取种子列表
+                        torrents_url = f"{instance_config['host']}/api/v2/torrents/info"
+                        try:
+                            async with session.get(torrents_url, cookies=cookies, timeout=aiohttp.ClientTimeout(total=5)) as torrents_response:
+                                torrents_info = await torrents_response.json() if torrents_response.status == 200 else []
+                        except Exception:
+                            # 种子列表获取失败，使用空列表
+                            torrents_info = []
+                        
+                        active_downloads = len([t for t in torrents_info if t.get("state") == "downloading"])
+                        active_seeds = len([t for t in torrents_info if t.get("state") == "uploading"])
+                        
+                        status_data = {
+                            "success": True,
+                            "instance_name": instance_config["name"],
+                            "status": "online",
+                            "download_speed": transfer_info.get("dl_info_speed", 0),
+                            "upload_speed": transfer_info.get("up_info_speed", 0),
+                            "active_downloads": active_downloads,
+                            "active_seeds": active_seeds,
+                            "total_torrents": len(torrents_info),
+                            "last_update": datetime.now().isoformat()
+                        }
+                        
+                        logger.debug(f"✅ {instance_config['name']} - 在线, 下载: {status_data['download_speed']} B/s, 上传: {status_data['upload_speed']} B/s")
+                        return status_data
+                    elif transfer_response.status == 403:
+                        # Cookie 过期，清除缓存和Cookie
+                        instance_key = f"{instance_config['host']}_{instance_config['username']}"
+                        if instance_key in self.cookies:
+                            del self.cookies[instance_key]
+                        if instance_key in self.sid_cache:
+                            del self.sid_cache[instance_key]
+                        logger.warning(f"⚠️ {instance_config['name']} - Cookie已过期，已清除缓存")
+                        return {
+                            "success": False,
+                            "instance_name": instance_config["name"],
+                            "status": "offline",
+                            "error": "认证过期",
+                            "download_speed": 0,
+                            "upload_speed": 0,
+                            "active_downloads": 0,
+                            "active_seeds": 0,
+                            "total_torrents": 0,
+                            "last_update": datetime.now().isoformat()
+                        }
+                    else:
+                        logger.warning(f"⚠️ {instance_config['name']} - HTTP {transfer_response.status}")
+                        return {
+                            "success": False,
+                            "instance_name": instance_config["name"],
+                            "status": "offline",
+                            "error": f"服务异常 (HTTP {transfer_response.status})",
+                            "download_speed": 0,
+                            "upload_speed": 0,
+                            "active_downloads": 0,
+                            "active_seeds": 0,
+                            "total_torrents": 0,
+                            "last_update": datetime.now().isoformat()
+                        }
+            except asyncio.TimeoutError:
+                logger.warning(f"⚠️ {instance_config['name']} - 连接超时")
+                return {
+                    "success": False,
+                    "instance_name": instance_config["name"],
+                    "status": "offline",
+                    "error": "连接超时",
+                    "download_speed": 0,
+                    "upload_speed": 0,
+                    "active_downloads": 0,
+                    "active_seeds": 0,
+                    "total_torrents": 0,
+                    "last_update": datetime.now().isoformat()
+                }
+            except aiohttp.ClientConnectorError as e:
+                logger.warning(f"⚠️ {instance_config['name']} - 连接失败: {e}")
+                return {
+                    "success": False,
+                    "instance_name": instance_config["name"],
+                    "status": "offline",
+                    "error": "连接失败",
+                    "download_speed": 0,
+                    "upload_speed": 0,
+                    "active_downloads": 0,
+                    "active_seeds": 0,
+                    "total_torrents": 0,
+                    "last_update": datetime.now().isoformat()
+                }
         except Exception as e:
             error_msg = str(e)
-            print(f"❌ {instance_config['name']} - 采集异常: {error_msg}")
+            logger.warning(f"⚠️ {instance_config['name']} - 采集异常: {error_msg}")
             return {
                 "success": False,
                 "instance_name": instance_config["name"],
-                "status": "error", 
-                "error": error_msg
+                "status": "offline",
+                "error": "服务异常",
+                "download_speed": 0,
+                "upload_speed": 0,
+                "active_downloads": 0,
+                "active_seeds": 0,
+                "total_torrents": 0,
+                "last_update": datetime.now().isoformat()
             }
     
     async def set_speed_limits(self, instance_config: dict, download_limit: int, upload_limit: int) -> bool:

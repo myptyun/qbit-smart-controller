@@ -701,14 +701,35 @@
                 return 'bg-danger';
             }
 
+            getQbitStatusClass(instance) {
+                if (!instance.success) return 'instance-error';
+                if (instance.status === 'online') return 'instance-online';
+                if (instance.status === 'offline') return 'instance-offline';
+                return 'instance-error';
+            }
+
+            getQbitStatusText(instance) {
+                if (!instance.success) return '错误';
+                if (instance.status === 'online') return '在线';
+                if (instance.status === 'offline') return '离线';
+                return '异常';
+            }
+
+            getQbitStatusBadge(instance) {
+                if (!instance.success) return 'bg-warning';
+                if (instance.status === 'online') return 'bg-success';
+                if (instance.status === 'offline') return 'bg-danger';
+                return 'bg-warning';
+            }
+
             renderQbitStatus(status) {
                 const container = document.getElementById('qbit-status-content');
                 if (status.instances && status.instances.length > 0) {
                     let html = '';
                     status.instances.forEach(instance => {
                         const isOnline = instance.success && instance.status === 'online';
-                        const statusBadge = isOnline ? 'bg-success' : 'bg-danger';
-                        const statusText = isOnline ? '在线' : (instance.error || '离线');
+                        const statusBadge = this.getQbitStatusBadge(instance);
+                        const statusText = this.getQbitStatusText(instance);
                         
                         html += `
                             <div class="card mb-3">
@@ -748,8 +769,34 @@
                                             </small>
                                         </div>
                                     ` : `
-                                        <div class="alert alert-warning py-2 mb-0">
-                                            <small><i class="fas fa-exclamation-triangle me-1"></i> ${instance.error || '连接失败'}</small>
+                                        <div class="row text-center">
+                                            <div class="col-6 border-end">
+                                                <small class="text-muted d-block">下载</small>
+                                                <span class="speed-value text-muted">${this.formatSpeed(instance.download_speed || 0)}</span>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">上传</small>
+                                                <span class="speed-value text-muted">${this.formatSpeed(instance.upload_speed || 0)}</span>
+                                            </div>
+                                        </div>
+                                        <div class="row text-center mt-2">
+                                            <div class="col-4 border-end">
+                                                <small class="text-muted d-block">下载中</small>
+                                                <span class="fw-bold text-muted">${instance.active_downloads || 0}</span>
+                                            </div>
+                                            <div class="col-4 border-end">
+                                                <small class="text-muted d-block">做种中</small>
+                                                <span class="fw-bold text-muted">${instance.active_seeds || 0}</span>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted d-block">总任务</small>
+                                                <span class="fw-bold text-muted">${instance.total_torrents || 0}</span>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-exclamation-triangle me-1"></i> ${instance.error || '离线'}
+                                            </small>
                                         </div>
                                     `}
                                 </div>
