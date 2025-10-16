@@ -1,0 +1,45 @@
+# 智能 qBittorrent 限速控制器配置文件示例
+# 复制此文件为 config.yaml 并修改相应配置
+
+# Lucky设备配置
+lucky_devices:
+  - name: "手机设备"
+    api_url: "http://192.168.2.3:16601/api/webservice/rules?openToken=YOUR_OPEN_TOKEN_HERE"
+    weight: 1.0
+    enabled: true
+    description: "主要手机设备"
+    
+  - name: "平板设备" 
+    api_url: "http://192.168.2.3:16601/api/webservice/rules?openToken=ANOTHER_OPEN_TOKEN_HERE"
+    weight: 0.8
+    enabled: true
+    description: "平板设备"
+
+# qBittorrent实例配置
+qbittorrent_instances:
+  - name: "HZ-QB1"
+    host: "http://192.168.2.10:8080"
+    username: "admin"
+    password: "admin_password_here"
+    enabled: true
+    description: "主下载服务器"
+    
+  - name: "HZ-QB2"
+    host: "http://192.168.2.11:8080"
+    username: "admin" 
+    password: "admin_password_here"
+    enabled: true
+    description: "备份下载服务器"
+
+# 控制器设置
+controller_settings:
+  poll_interval: 2          # 状态采集频率（秒）
+  limit_on_delay: 5         # 限速触发延迟（秒）
+  limit_off_delay: 30       # 恢复全速延迟（秒）
+  retry_interval: 10        # 重连间隔（秒）
+  
+  # 速度限制 (KB/s)
+  limited_download: 1024    # 限速时的下载速度
+  limited_upload: 512       # 限速时的上传速度
+  normal_download: 0        # 正常时的下载速度 (0表示不限速)
+  normal_upload: 0          # 正常时的上传速度 (0表示不限速)

@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能 qBittorrent 限速控制器 v2.0</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .status-card { transition: all 0.3s; border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .device-online { border-left: 4px solid #198754; }
+        .device-offline { border-left: 4px solid #dc3545; }
+        .device-error { border-left: 4px solid #ffc107; }
+        .device-disabled { border-left: 4px solid #6c757d; }
+        .limit-active { background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; }
+        .limit-inactive { background: linear-gradient(45deg, #51cf66, #40c057); color: white; }
+        .connection-badge { font-size: 0.8em; }
+        .speed-value { font-family: 'Courier New', monospace; font-weight: bold; }
+        .api-status { font-size: 0.75em; }
+        .log-entry { font-family: 'Courier New', monospace; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                智能 qBittorrent 限速控制器 v2.0
+            </a>
+            <div class="navbar-text">
+                <span id="current-time" class="text-light"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 系统状态 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            系统状态
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>服务状态:</strong> 
+                                <span id="service-status" class="badge bg-success">运行中</span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>版本:</strong> v2.0.0
+                            </div>
+                            <div class="col-md-4">
+                                <strong>最后更新:</strong> 
+                                <span id="last-update-time">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 状态概览 -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card status-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-satellite-dish fa-2x text-primary mb-2"></i>
+                        <h4 id="lucky-devices-count">0</h4>
+                        <p class="text-muted mb-0">Lucky 设备</p>
+                        <small id="lucky-active-count" class="text-muted">0 个活跃</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card status-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-server fa-2x text-success mb-2"></i>
+                        <h4 id="qbit-instances-count">0</h4>
+                        <p class="text-muted mb-0">QB 实例</p>
+                        <small id="qbit-active-count" class="text-muted">0 个在线</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card status-card" id="limit-status-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-network-wired fa-2x mb-2"></i>
+                        <h4 id="connection-status">正常</h4>
+                        <p class="mb-0">限速状态</p>
+                        <small id="active-connections" class="text-muted">0 个活跃连接</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card status-card bg-light">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                        <h4 id="next-check">2s</h4>
+                        <p class="text-muted mb-0">下次检查</p>
+                        <small id="last-collection-time" class="text-muted">-</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Lucky 设备状态 -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-satellite-dish me-2"></i>
+                            Lucky 设备状态
+                        </h5>
+                        <div>
+                            <button class="btn btn-sm btn-light me-2" onclick="testLuckyConnection(0)">
+                                <i class="fas fa-plug"></i> 测试连接
+                            </button>
+                            <button class="btn btn-sm btn-light" onclick="refreshLuckyStatus()">
+                                <i class="fas fa-sync-alt"></i> 刷新
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="lucky-status-content">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                                <p class="mt-2 text-muted">正在连接 Lucky 设备...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- qBittorrent 状态 -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-server me-2"></i>
+                            qBittorrent 状态
+                        </h5>
+                        <div>
+                            <button class="btn btn-sm btn-light me-2" onclick="testQbitConnection(0)">
+                                <i class="fas fa-plug"></i> 测试连接
+                            </button>
+                            <button class="btn btn-sm btn-light" onclick="refreshQbitStatus()">
+                                <i class="fas fa-sync-alt"></i> 刷新
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="qbit-status-content">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                                <p class="mt-2 text-muted">正在连接 qBittorrent...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 调试信息 -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bug me-2"></i>
+                            调试信息
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button class="btn btn-outline-primary w-100 mb-2" onclick="getDebugConfig()">
+                                    <i class="fas fa-cog me-2"></i>查看配置
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-outline-secondary w-100 mb-2" onclick="clearLogs()">
+                                    <i class="fas fa-trash me-2"></i>清空日志
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <h6>系统日志:</h6>
+                            <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                <div id="debug-logs">
+                                    <div class="log-entry text-muted">等待日志信息...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-light py-3 mt-5">
+        <div class="container text-center">
+            <small>智能 qBittorrent 限速控制器 v2.0.0 | 实时监控与智能限速</small>
+        </div>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        class QBControllerDashboard {
+            constructor() {
+                this.config = null;
+                this.lastUpdate = new Date();
+                this.updateInterval = null;
+                this.logEntries = [];
+                this.init();
+            }
+
+            init() {
+                this.updateCurrentTime();
+                this.loadConfig();
+                this.startStatusUpdates();
+                this.addLog('系统初始化完成', 'info');
+                
+                setInterval(() => {
+                    this.updateCurrentTime();
+                }, 1000);
+            }
+
+            updateCurrentTime() {
+                const now = new Date();
+                document.getElementById('current-time').textContent = 
+                    now.toLocaleString('zh-CN');
+            }
+
+            async loadConfig() {
+                try {
+                    const response = await fetch('/api/config');
+                    this.config = await response.json();
+                    this.addLog('配置加载成功', 'success');
+                } catch (error) {
+                    this.addLog('配置加载失败: ' + error, 'error');
+                    console.error('加载配置失败:', error);
+                }
+            }
+
+            async startStatusUpdates() {
+                await this.updateStatus();
+                this.updateInterval = setInterval(() => {
+                    this.updateStatus();
+                }, 2000);
+            }
+
+            async updateStatus() {
+                try {
+                    this.addLog('开始采集状态数据...', 'info');
+                    const [luckyStatus, qbitStatus, controllerState] = await Promise.all([
+                        fetch('/api/lucky/status').then(r => r.json()),
+                        fetch('/api/qbit/status').then(r => r.json()),
+                        fetch('/api/controller/state').then(r => r.json())
+                    ]);
+
+                    this.renderLuckyStatus(luckyStatus);
+                    this.renderQbitStatus(qbitStatus);
+                    this.updateOverview(luckyStatus, qbitStatus, controllerState);
+                    this.lastUpdate = new Date();
+                    
+                    document.getElementById('last-update-time').textContent = 
+                        this.lastUpdate.toLocaleTimeString('zh-CN');
+                    document.getElementById('last-collection-time').textContent = 
+                        this.lastUpdate.toLocaleTimeString('zh-CN');
+                        
+                    this.addLog('状态数据采集完成', 'success');
+                } catch (error) {
+                    this.addLog('状态更新失败: ' + error, 'error');
+                    console.error('状态更新失败:', error);
+                }
+            }
+
+            renderLuckyStatus(status) {
+                const container = document.getElementById('lucky-status-content');
+                if (status.devices && status.devices.length > 0) {
+                    let html = '';
+                    status.devices.forEach(device => {
+                        const statusClass = this.getLuckyStatusClass(device);
+                        const statusText = this.getLuckyStatusText(device);
+                        const statusBadge = this.getLuckyStatusBadge(device);
+                        
+                        html += `
+                            <div class="card mb-3 ${statusClass}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0">${device.device_name}</h6>
+                                        <span class="badge ${statusBadge}">${statusText}</span>
+                                    </div>
+                                    ${device.success ? `
+                                        <div class="row text-center">
+                                            <div class="col-6 border-end">
+                                                <small class="text-muted d-block">连接数</small>
+                                                <span class="fw-bold fs-5 ${device.connections > 0 ? 'text-danger' : 'text-success'}">
+                                                    ${device.connections}
+                                                </span>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">加权连接</small>
+                                                <span class="fw-bold fs-5">${device.weighted_connections.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted api-status">
+                                                最后更新: ${new Date(device.last_update).toLocaleTimeString('zh-CN')}
+                                            </small>
+                                        </div>
+                                    ` : `
+                                        <div class="alert alert-warning py-2 mb-0">
+                                            <small><i class="fas fa-exclamation-triangle me-1"></i> ${device.error || '连接失败'}</small>
+                                        </div>
+                                    `}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <p>未配置 Lucky 设备</p>
+                        </div>
+                    `;
+                }
+            }
+
+            getLuckyStatusClass(device) {
+                if (!device.success) return 'device-error';
+                if (device.status === 'online') return 'device-online';
+                if (device.status === 'disabled') return 'device-disabled';
+                return 'device-offline';
+            }
+
+            getLuckyStatusText(device) {
+                if (!device.success) return '错误';
+                if (device.status === 'online') return '在线';
+                if (device.status === 'disabled') return '禁用';
+                return '离线';
+            }
+
+            getLuckyStatusBadge(device) {
+                if (!device.success) return 'bg-warning';
+                if (device.status === 'online') return 'bg-success';
+                if (device.status === 'disabled') return 'bg-secondary';
+                return 'bg-danger';
+            }
+
+            renderQbitStatus(status) {
+                const container = document.getElementById('qbit-status-content');
+                if (status.instances && status.instances.length > 0) {
+                    let html = '';
+                    status.instances.forEach(instance => {
+                        const isOnline = instance.success && instance.status === 'online';
+                        const statusBadge = isOnline ? 'bg-success' : 'bg-danger';
+                        const statusText = isOnline ? '在线' : (instance.error || '离线');
+                        
+                        html += `
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0">${instance.instance_name}</h6>
+                                        <span class="badge ${statusBadge}">${statusText}</span>
+                                    </div>
+                                    ${isOnline ? `
+                                        <div class="row text-center">
+                                            <div class="col-6 border-end">
+                                                <small class="text-muted d-block">下载</small>
+                                                <span class="speed-value text-primary">${this.formatSpeed(instance.download_speed)}</span>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">上传</small>
+                                                <span class="speed-value text-success">${this.formatSpeed(instance.upload_speed)}</span>
+                                            </div>
+                                        </div>
+                                        <div class="row text-center mt-2">
+                                            <div class="col-4 border-end">
+                                                <small class="text-muted d-block">下载中</small>
+                                                <span class="fw-bold">${instance.active_downloads}</span>
+                                            </div>
+                                            <div class="col-4 border-end">
+                                                <small class="text-muted d-block">做种中</small>
+                                                <span class="fw-bold">${instance.active_seeds}</span>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted d-block">总任务</small>
+                                                <span class="fw-bold">${instance.total_torrents}</span>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted api-status">
+                                                最后更新: ${new Date(instance.last_update).toLocaleTimeString('zh-CN')}
+                                            </small>
+                                        </div>
+                                    ` : `
+                                        <div class="alert alert-warning py-2 mb-0">
+                                            <small><i class="fas fa-exclamation-triangle me-1"></i> ${instance.error || '连接失败'}</small>
+                                        </div>
+                                    `}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <p>未配置 qBittorrent 实例</p>
+                        </div>
+                    `;
+                }
+            }
+
+            formatSpeed(bytes) {
+                if (bytes === 0) return '0 B/s';
+                const k = 1024;
+                const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            updateOverview(luckyStatus, qbitStatus, controllerState) {
+                // Lucky 设备统计
+                const luckyDevices = luckyStatus.devices || [];
+                const activeLuckyDevices = luckyDevices.filter(d => d.success && d.status === 'online').length;
+                
+                document.getElementById('lucky-devices-count').textContent = luckyDevices.length;
+                document.getElementById('lucky-active-count').textContent = `${activeLuckyDevices} 个活跃`;
+
+                // QB 实例统计
+                const qbitInstances = qbitStatus.instances || [];
+                const activeQbitInstances = qbitInstances.filter(i => i.success && i.status === 'online').length;
+                
+                document.getElementById('qbit-instances-count').textContent = qbitInstances.length;
+                document.getElementById('qbit-active-count').textContent = `${activeQbitInstances} 个在线`;
+
+                // 控制器状态（使用真实的控制器数据）
+                const statusElement = document.getElementById('connection-status');
+                const statusCard = document.getElementById('limit-status-card');
+                const activeConnElement = document.getElementById('active-connections');
+                
+                if (controllerState) {
+                    const isLimited = controllerState.is_limited;
+                    const totalConnections = controllerState.total_connections || 0;
+                    const limitTimer = controllerState.limit_timer || 0;
+                    const normalTimer = controllerState.normal_timer || 0;
+                    
+                    if (isLimited) {
+                        statusElement.textContent = '限速中';
+                        statusCard.className = 'card status-card limit-active';
+                        activeConnElement.textContent = `${totalConnections.toFixed(1)} 个加权连接`;
+                    } else {
+                        statusElement.textContent = '正常';
+                        statusCard.className = 'card status-card limit-inactive';
+                        
+                        if (totalConnections > 0) {
+                            activeConnElement.textContent = `检测到连接，倒计时 ${limitTimer.toFixed(0)}s`;
+                        } else if (normalTimer > 0) {
+                            activeConnElement.textContent = `恢复倒计时 ${normalTimer.toFixed(0)}s`;
+                        } else {
+                            activeConnElement.textContent = '无活跃连接';
+                        }
+                    }
+                    
+                    // 更新服务状态
+                    const serviceStatus = document.getElementById('service-status');
+                    if (controllerState.running) {
+                        serviceStatus.className = 'badge bg-success';
+                        serviceStatus.textContent = '运行中';
+                    } else {
+                        serviceStatus.className = 'badge bg-danger';
+                        serviceStatus.textContent = '已停止';
+                    }
+                }
+
+                this.updateNextCheck();
+            }
+
+            updateNextCheck() {
+                const nextCheck = document.getElementById('next-check');
+                let count = 2;
+                
+                const countdown = setInterval(() => {
+                    nextCheck.textContent = count + 's';
+                    count--;
+                    
+                    if (count < 0) {
+                        clearInterval(countdown);
+                    }
+                }, 1000);
+            }
+
+            addLog(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString('zh-CN');
+                const typeIcon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+                const typeClass = type === 'success' ? 'text-success' : type === 'error' ? 'text-danger' : type === 'warning' ? 'text-warning' : 'text-info';
+                
+                const logEntry = {
+                    timestamp,
+                    message,
+                    type,
+                    typeIcon,
+                    typeClass
+                };
+                
+                this.logEntries.unshift(logEntry);
+                
+                // 保持最多50条日志
+                if (this.logEntries.length > 50) {
+                    this.logEntries.pop();
+                }
+                
+                this.renderLogs();
+            }
+
+            renderLogs() {
+                const container = document.getElementById('debug-logs');
+                let html = '';
+                
+                this.logEntries.forEach(entry => {
+                    html += `
+                        <div class="log-entry ${entry.typeClass}">
+                            <small>[${entry.timestamp}] ${entry.typeIcon} ${entry.message}</small>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            }
+        }
+
+        // 全局函数
+        async function refreshLuckyStatus() {
+            window.dashboard.addLog('手动刷新Lucky状态...', 'info');
+            const container = document.getElementById('lucky-status-content');
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-2 text-muted">刷新中...</p>
+                </div>
+            `;
+            await window.dashboard.updateStatus();
+        }
+
+        async function refreshQbitStatus() {
+            window.dashboard.addLog('手动刷新QB状态...', 'info');
+            const container = document.getElementById('qbit-status-content');
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-2 text-muted">刷新中...</p>
+                </div>
+            `;
+            await window.dashboard.updateStatus();
+        }
+
+        async function testLuckyConnection(index) {
+            try {
+                window.dashboard.addLog('测试Lucky连接...', 'info');
+                const response = await fetch(`/api/test/lucky/${index}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.dashboard.addLog(`Lucky连接测试成功: ${result.message}`, 'success');
+                    alert(`✅ Lucky连接测试成功:\n${result.message}`);
+                } else {
+                    window.dashboard.addLog(`Lucky连接测试失败: ${result.message}`, 'error');
+                    alert(`❌ Lucky连接测试失败:\n${result.message}`);
+                }
+            } catch (error) {
+                window.dashboard.addLog(`Lucky连接测试错误: ${error}`, 'error');
+                alert(`❌ Lucky连接测试错误:\n${error}`);
+            }
+        }
+
+        async function testQbitConnection(index) {
+            try {
+                window.dashboard.addLog('测试QB连接...', 'info');
+                const response = await fetch(`/api/test/qbit/${index}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.dashboard.addLog(`QB连接测试成功: ${result.message}`, 'success');
+                    alert(`✅ QB连接测试成功:\n${result.message}`);
+                } else {
+                    window.dashboard.addLog(`QB连接测试失败: ${result.message}`, 'error');
+                    alert(`❌ QB连接测试失败:\n${result.message}`);
+                }
+            } catch (error) {
+                window.dashboard.addLog(`QB连接测试错误: ${error}`, 'error');
+                alert(`❌ QB连接测试错误:\n${error}`);
+            }
+        }
+
+        async function getDebugConfig() {
+            try {
+                const response = await fetch('/api/debug/config');
+                const result = await response.json();
+                window.dashboard.addLog('获取调试配置成功', 'success');
+                alert('调试配置信息已查看，请查看控制台日志');
+                console.log('调试配置:', result);
+            } catch (error) {
+                window.dashboard.addLog('获取调试配置失败: ' + error, 'error');
+                alert('获取调试配置失败: ' + error);
+            }
+        }
+
+        function clearLogs() {
+            window.dashboard.logEntries = [];
+            window.dashboard.renderLogs();
+            window.dashboard.addLog('日志已清空', 'info');
+        }
+
+        // 初始化仪表板
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard = new QBControllerDashboard();
+        });
+    </script>
+</body>
+</html>
