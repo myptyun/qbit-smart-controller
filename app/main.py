@@ -723,8 +723,8 @@ class QBittorrentManager:
                     
                     # 打印所有 Cookie
                     print(f"🍪 收到 Cookie 数量: {len(cookies)}")
-                    for cookie in cookies:
-                        print(f"🍪 Cookie: {cookie.key} = {cookie.value}")
+                    for name, cookie in cookies.items():
+                        print(f"🍪 Cookie: {name} = {cookie.value}")
                     
                     # 检查是否有 SID Cookie
                     sid_cookie = cookies.get('SID')
