@@ -170,6 +170,112 @@
             </div>
         </div>
 
+        <!-- 配置管理 -->
+        <div class="row mt-4">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-satellite-dish me-2"></i>
+                            Lucky 设备管理
+                        </h5>
+                        <button class="btn btn-light btn-sm" onclick="showLuckyDeviceModal()">
+                            <i class="fas fa-plus"></i> 添加设备
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="lucky-devices-config">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                                <p class="mt-2 text-muted">正在加载设备配置...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-server me-2"></i>
+                            qBittorrent 实例管理
+                        </h5>
+                        <button class="btn btn-light btn-sm" onclick="showQbitInstanceModal()">
+                            <i class="fas fa-plus"></i> 添加实例
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="qbit-instances-config">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                                <p class="mt-2 text-muted">正在加载实例配置...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制器设置 -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            控制器设置
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">轮询间隔 (秒)</label>
+                                <input type="number" class="form-control" id="poll-interval" value="2" min="1" max="60">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">限速触发延迟 (秒)</label>
+                                <input type="number" class="form-control" id="limit-on-delay" value="5" min="1" max="300">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">恢复延迟 (秒)</label>
+                                <input type="number" class="form-control" id="limit-off-delay" value="30" min="1" max="600">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">限速下载 (KB/s)</label>
+                                <input type="number" class="form-control" id="limited-download" value="1024" min="0">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-3">
+                                <label class="form-label">限速上传 (KB/s)</label>
+                                <input type="number" class="form-control" id="limited-upload" value="512" min="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">正常下载 (KB/s)</label>
+                                <input type="number" class="form-control" id="normal-download" value="0" min="0">
+                                <small class="text-muted">0 = 不限速</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">正常上传 (KB/s)</label>
+                                <input type="number" class="form-control" id="normal-upload" value="0" min="0">
+                                <small class="text-muted">0 = 不限速</small>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" onclick="saveControllerSettings()">
+                                    <i class="fas fa-save me-2"></i>保存设置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 调试信息 -->
         <div class="row mt-4">
             <div class="col-12">
@@ -202,6 +308,93 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lucky 设备配置模态框 -->
+    <div class="modal fade" id="luckyDeviceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Lucky 设备配置</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="lucky-device-form">
+                        <div class="mb-3">
+                            <label class="form-label">设备名称</label>
+                            <input type="text" class="form-control" id="device-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">API 地址</label>
+                            <input type="url" class="form-control" id="device-api-url" 
+                                   placeholder="http://192.168.1.100:16601/api/webservice/rules?openToken=YOUR_TOKEN" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">权重</label>
+                            <input type="number" class="form-control" id="device-weight" value="1.0" min="0.1" max="10" step="0.1">
+                            <small class="text-muted">用于多设备加权计算</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">描述</label>
+                            <input type="text" class="form-control" id="device-description" placeholder="设备描述（可选）">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="device-enabled" checked>
+                            <label class="form-check-label" for="device-enabled">启用此设备</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveLuckyDevice()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- qBittorrent 实例配置模态框 -->
+    <div class="modal fade" id="qbitInstanceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">qBittorrent 实例配置</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="qbit-instance-form">
+                        <div class="mb-3">
+                            <label class="form-label">实例名称</label>
+                            <input type="text" class="form-control" id="instance-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">主机地址</label>
+                            <input type="url" class="form-control" id="instance-host" 
+                                   placeholder="http://192.168.1.200:8080" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="instance-username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">密码</label>
+                            <input type="password" class="form-control" id="instance-password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">描述</label>
+                            <input type="text" class="form-control" id="instance-description" placeholder="实例描述（可选）">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="instance-enabled" checked>
+                            <label class="form-check-label" for="instance-enabled">启用此实例</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-success" onclick="saveQbitInstance()">保存</button>
                 </div>
             </div>
         </div>
@@ -248,10 +441,126 @@
                     const response = await fetch('/api/config');
                     this.config = await response.json();
                     this.addLog('配置加载成功', 'success');
+                    this.renderConfigSections();
                 } catch (error) {
                     this.addLog('配置加载失败: ' + error, 'error');
                     console.error('加载配置失败:', error);
                 }
+            }
+
+            renderConfigSections() {
+                this.renderLuckyDevicesConfig();
+                this.renderQbitInstancesConfig();
+                this.renderControllerSettings();
+            }
+
+            renderLuckyDevicesConfig() {
+                const container = document.getElementById('lucky-devices-config');
+                const devices = this.config.lucky_devices || [];
+                
+                if (devices.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-satellite-dish fa-2x mb-2"></i>
+                            <p>暂无 Lucky 设备</p>
+                            <small>点击上方"添加设备"按钮开始配置</small>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                devices.forEach((device, index) => {
+                    const statusClass = device.enabled ? 'success' : 'secondary';
+                    const statusText = device.enabled ? '启用' : '禁用';
+                    
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">${device.name}</h6>
+                                    <span class="badge bg-${statusClass}">${statusText}</span>
+                                </div>
+                                <p class="text-muted mb-2">
+                                    <small>API: ${device.api_url}</small><br>
+                                    <small>权重: ${device.weight}</small>
+                                </p>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="editLuckyDevice(${index})">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteLuckyDevice(${index})">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="testLuckyDevice(${index})">
+                                        <i class="fas fa-plug"></i> 测试
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+
+            renderQbitInstancesConfig() {
+                const container = document.getElementById('qbit-instances-config');
+                const instances = this.config.qbittorrent_instances || [];
+                
+                if (instances.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-server fa-2x mb-2"></i>
+                            <p>暂无 qBittorrent 实例</p>
+                            <small>点击上方"添加实例"按钮开始配置</small>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                instances.forEach((instance, index) => {
+                    const statusClass = instance.enabled ? 'success' : 'secondary';
+                    const statusText = instance.enabled ? '启用' : '禁用';
+                    
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">${instance.name}</h6>
+                                    <span class="badge bg-${statusClass}">${statusText}</span>
+                                </div>
+                                <p class="text-muted mb-2">
+                                    <small>地址: ${instance.host}</small><br>
+                                    <small>用户: ${instance.username}</small>
+                                </p>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="editQbitInstance(${index})">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteQbitInstance(${index})">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="testQbitInstance(${index})">
+                                        <i class="fas fa-plug"></i> 测试
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+
+            renderControllerSettings() {
+                const settings = this.config.controller_settings || {};
+                document.getElementById('poll-interval').value = settings.poll_interval || 2;
+                document.getElementById('limit-on-delay').value = settings.limit_on_delay || 5;
+                document.getElementById('limit-off-delay').value = settings.limit_off_delay || 30;
+                document.getElementById('limited-download').value = settings.limited_download || 1024;
+                document.getElementById('limited-upload').value = settings.limited_upload || 512;
+                document.getElementById('normal-download').value = settings.normal_download || 0;
+                document.getElementById('normal-upload').value = settings.normal_upload || 0;
             }
 
             async startStatusUpdates() {
@@ -630,6 +939,199 @@
             window.dashboard.logEntries = [];
             window.dashboard.renderLogs();
             window.dashboard.addLog('日志已清空', 'info');
+        }
+
+        // 配置管理函数
+        function showLuckyDeviceModal() {
+            const modal = new bootstrap.Modal(document.getElementById('luckyDeviceModal'));
+            document.getElementById('lucky-device-form').reset();
+            document.getElementById('device-weight').value = '1.0';
+            document.getElementById('device-enabled').checked = true;
+            modal.show();
+        }
+
+        function showQbitInstanceModal() {
+            const modal = new bootstrap.Modal(document.getElementById('qbitInstanceModal'));
+            document.getElementById('qbit-instance-form').reset();
+            document.getElementById('instance-enabled').checked = true;
+            modal.show();
+        }
+
+        async function saveLuckyDevice() {
+            const device = {
+                name: document.getElementById('device-name').value,
+                api_url: document.getElementById('device-api-url').value,
+                weight: parseFloat(document.getElementById('device-weight').value),
+                enabled: document.getElementById('device-enabled').checked,
+                description: document.getElementById('device-description').value
+            };
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...window.dashboard.config,
+                        lucky_devices: [...(window.dashboard.config.lucky_devices || []), device]
+                    })
+                });
+
+                if (response.ok) {
+                    window.dashboard.addLog('Lucky 设备保存成功', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('luckyDeviceModal')).hide();
+                    await window.dashboard.loadConfig();
+                } else {
+                    throw new Error('保存失败');
+                }
+            } catch (error) {
+                window.dashboard.addLog('Lucky 设备保存失败: ' + error.message, 'error');
+            }
+        }
+
+        async function saveQbitInstance() {
+            const instance = {
+                name: document.getElementById('instance-name').value,
+                host: document.getElementById('instance-host').value,
+                username: document.getElementById('instance-username').value,
+                password: document.getElementById('instance-password').value,
+                enabled: document.getElementById('instance-enabled').checked,
+                description: document.getElementById('instance-description').value
+            };
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...window.dashboard.config,
+                        qbittorrent_instances: [...(window.dashboard.config.qbittorrent_instances || []), instance]
+                    })
+                });
+
+                if (response.ok) {
+                    window.dashboard.addLog('qBittorrent 实例保存成功', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('qbitInstanceModal')).hide();
+                    await window.dashboard.loadConfig();
+                } else {
+                    throw new Error('保存失败');
+                }
+            } catch (error) {
+                window.dashboard.addLog('qBittorrent 实例保存失败: ' + error.message, 'error');
+            }
+        }
+
+        async function saveControllerSettings() {
+            const settings = {
+                poll_interval: parseInt(document.getElementById('poll-interval').value),
+                limit_on_delay: parseInt(document.getElementById('limit-on-delay').value),
+                limit_off_delay: parseInt(document.getElementById('limit-off-delay').value),
+                limited_download: parseInt(document.getElementById('limited-download').value),
+                limited_upload: parseInt(document.getElementById('limited-upload').value),
+                normal_download: parseInt(document.getElementById('normal-download').value),
+                normal_upload: parseInt(document.getElementById('normal-upload').value)
+            };
+
+            try {
+                const response = await fetch('/api/config/controller', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+
+                if (response.ok) {
+                    window.dashboard.addLog('控制器设置保存成功', 'success');
+                    await window.dashboard.loadConfig();
+                } else {
+                    throw new Error('保存失败');
+                }
+            } catch (error) {
+                window.dashboard.addLog('控制器设置保存失败: ' + error.message, 'error');
+            }
+        }
+
+        function editLuckyDevice(index) {
+            const device = window.dashboard.config.lucky_devices[index];
+            const modal = new bootstrap.Modal(document.getElementById('luckyDeviceModal'));
+            
+            document.getElementById('device-name').value = device.name;
+            document.getElementById('device-api-url').value = device.api_url;
+            document.getElementById('device-weight').value = device.weight;
+            document.getElementById('device-enabled').checked = device.enabled;
+            document.getElementById('device-description').value = device.description || '';
+            
+            // 标记为编辑模式
+            document.getElementById('lucky-device-form').dataset.editIndex = index;
+            modal.show();
+        }
+
+        function editQbitInstance(index) {
+            const instance = window.dashboard.config.qbittorrent_instances[index];
+            const modal = new bootstrap.Modal(document.getElementById('qbitInstanceModal'));
+            
+            document.getElementById('instance-name').value = instance.name;
+            document.getElementById('instance-host').value = instance.host;
+            document.getElementById('instance-username').value = instance.username;
+            document.getElementById('instance-password').value = instance.password;
+            document.getElementById('instance-enabled').checked = instance.enabled;
+            document.getElementById('instance-description').value = instance.description || '';
+            
+            // 标记为编辑模式
+            document.getElementById('qbit-instance-form').dataset.editIndex = index;
+            modal.show();
+        }
+
+        async function deleteLuckyDevice(index) {
+            if (!confirm('确定要删除这个 Lucky 设备吗？')) return;
+            
+            const devices = [...window.dashboard.config.lucky_devices];
+            devices.splice(index, 1);
+            
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...window.dashboard.config,
+                        lucky_devices: devices
+                    })
+                });
+
+                if (response.ok) {
+                    window.dashboard.addLog('Lucky 设备删除成功', 'success');
+                    await window.dashboard.loadConfig();
+                } else {
+                    throw new Error('删除失败');
+                }
+            } catch (error) {
+                window.dashboard.addLog('Lucky 设备删除失败: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteQbitInstance(index) {
+            if (!confirm('确定要删除这个 qBittorrent 实例吗？')) return;
+            
+            const instances = [...window.dashboard.config.qbittorrent_instances];
+            instances.splice(index, 1);
+            
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...window.dashboard.config,
+                        qbittorrent_instances: instances
+                    })
+                });
+
+                if (response.ok) {
+                    window.dashboard.addLog('qBittorrent 实例删除成功', 'success');
+                    await window.dashboard.loadConfig();
+                } else {
+                    throw new Error('删除失败');
+                }
+            } catch (error) {
+                window.dashboard.addLog('qBittorrent 实例删除失败: ' + error.message, 'error');
+            }
         }
 
         // 初始化仪表板

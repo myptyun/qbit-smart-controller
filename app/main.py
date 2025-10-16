@@ -340,6 +340,70 @@ class LuckyMonitor:
             traceback.print_exc()
             return 0
     
+    def _parse_detailed_connections(self, data: dict) -> list:
+        """解析Lucky API响应，提取详细的连接信息"""
+        try:
+            print("🔍 开始解析Lucky详细连接数据...")
+            connections_info = []
+            
+            # 方法1: 从statistics中提取详细信息
+            if "statistics" in data and data["statistics"]:
+                for rule_key, rule_stats in data["statistics"].items():
+                    connections = (
+                        rule_stats.get("Connections", 0) or 
+                        rule_stats.get("connections", 0) or
+                        rule_stats.get("ConnCount", 0) or
+                        rule_stats.get("ActiveConnections", 0)
+                    )
+                    
+                    if connections > 0:
+                        connections_info.append({
+                            "rule_name": rule_key,
+                            "connections": connections,
+                            "download_bytes": rule_stats.get("DownloadBytes", 0),
+                            "upload_bytes": rule_stats.get("UploadBytes", 0),
+                            "download_speed": rule_stats.get("DownloadSpeed", 0),
+                            "upload_speed": rule_stats.get("UploadSpeed", 0),
+                            "last_activity": rule_stats.get("LastActivity", ""),
+                            "status": "active" if connections > 0 else "inactive"
+                        })
+                        print(f"  📡 规则 {rule_key}: {connections} 个连接")
+            
+            # 方法2: 从ruleList中提取详细信息
+            elif "ruleList" in data and isinstance(data["ruleList"], list):
+                for rule in data["ruleList"]:
+                    rule_name = rule.get("RuleName", "未知规则")
+                    connections = (
+                        rule.get("Connections", 0) or 
+                        rule.get("connections", 0) or
+                        rule.get("ConnCount", 0) or
+                        rule.get("CurrentConnections", 0)
+                    )
+                    
+                    connections_info.append({
+                        "rule_name": rule_name,
+                        "connections": connections,
+                        "download_bytes": rule.get("DownloadBytes", 0),
+                        "upload_bytes": rule.get("UploadBytes", 0),
+                        "download_speed": rule.get("DownloadSpeed", 0),
+                        "upload_speed": rule.get("UploadSpeed", 0),
+                        "last_activity": rule.get("LastActivity", ""),
+                        "status": "active" if connections > 0 else "inactive",
+                        "rule_type": rule.get("RuleType", "unknown"),
+                        "target": rule.get("Target", ""),
+                        "source": rule.get("Source", "")
+                    })
+                    print(f"  📡 规则 {rule_name}: {connections} 个连接")
+            
+            print(f"📊 解析到 {len(connections_info)} 个连接规则")
+            return connections_info
+            
+        except Exception as e:
+            print(f"❌ 详细连接解析错误: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
     async def close(self):
         """关闭会话并释放资源"""
         if self.session and not self.session.closed:
@@ -836,6 +900,65 @@ async def get_lucky_status():
     
     print(f"✅ Lucky状态采集完成: {len(status_data)} 个设备")
     return {"devices": status_data}
+
+@app.get("/api/lucky/connections")
+async def get_lucky_connections():
+    """获取Lucky设备的详细连接信息"""
+    print("🔍 获取Lucky详细连接信息...")
+    config = config_manager.load_config()
+    devices = config.get("lucky_devices", [])
+    
+    detailed_data = []
+    for device in devices:
+        if device.get("enabled", True):
+            try:
+                session = await lucky_monitor.get_session()
+                api_url = device["api_url"]
+                
+                async with session.get(api_url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        
+                        # 解析详细的连接信息
+                        connections_info = lucky_monitor._parse_detailed_connections(data)
+                        
+                        detailed_data.append({
+                            "success": True,
+                            "device_name": device["name"],
+                            "device_info": {
+                                "api_url": api_url,
+                                "weight": device.get("weight", 1.0),
+                                "description": device.get("description", "")
+                            },
+                            "connections": connections_info,
+                            "total_connections": sum(conn.get("connections", 0) for conn in connections_info),
+                            "last_update": datetime.now().isoformat(),
+                            "raw_data": data
+                        })
+                    else:
+                        detailed_data.append({
+                            "success": False,
+                            "device_name": device["name"],
+                            "error": f"HTTP {response.status}",
+                            "last_update": datetime.now().isoformat()
+                        })
+            except Exception as e:
+                detailed_data.append({
+                    "success": False,
+                    "device_name": device["name"],
+                    "error": str(e),
+                    "last_update": datetime.now().isoformat()
+                })
+        else:
+            detailed_data.append({
+                "success": False,
+                "device_name": device["name"],
+                "status": "disabled",
+                "error": "设备已禁用",
+                "last_update": datetime.now().isoformat()
+            })
+    
+    return {"devices": detailed_data}
 
 @app.get("/api/qbit/status")
 async def get_qbit_status():
