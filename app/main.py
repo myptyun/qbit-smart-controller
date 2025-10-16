@@ -665,6 +665,24 @@ class QBittorrentManager:
                         print(f"✅ 登录成功，SID: {sid_cookie.value[:20]}...")
                         return True
                     else:
+                        # 检查 Set-Cookie 头
+                        set_cookie_header = response.headers.get('Set-Cookie', '')
+                        print(f"🍪 Set-Cookie 头: {set_cookie_header}")
+                        
+                        if 'SID=' in set_cookie_header:
+                            # 手动解析 SID
+                            import re
+                            sid_match = re.search(r'SID=([^;]+)', set_cookie_header)
+                            if sid_match:
+                                sid_value = sid_match.group(1)
+                                print(f"✅ 从 Set-Cookie 头提取 SID: {sid_value[:20]}...")
+                                # 创建包含 SID 的 Cookie 对象
+                                from aiohttp import CookieJar
+                                jar = CookieJar()
+                                jar.update_cookies({'SID': sid_value})
+                                self.cookies[instance_key] = jar
+                                return True
+                        
                         # 即使没有明确的 SID，如果登录成功也保存 Cookie
                         self.cookies[instance_key] = cookies
                         print(f"⚠️ 登录成功但未找到 SID Cookie，保存所有 Cookie")
@@ -1104,7 +1122,8 @@ async def debug_qbit_connection(instance_index: int):
             "username": instance["username"],
             "password": "***"  # 隐藏密码
         },
-        "tests": []
+        "tests": [],
+        "cookies_stored": len(qbit_manager.cookies)
     }
     
     try:
@@ -1186,6 +1205,15 @@ async def debug_config():
         "config": config,
         "config_file": str(config_manager.config_file),
         "file_exists": config_manager.config_file.exists()
+    }
+
+@app.get("/api/test/connection")
+async def test_connection():
+    """测试连接 - 简单测试"""
+    return {
+        "success": True,
+        "message": "API 连接正常",
+        "timestamp": datetime.now().isoformat()
     }
 
 @app.get("/api/controller/state")
