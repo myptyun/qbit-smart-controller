@@ -48,6 +48,14 @@ COPY version.py ./
 COPY test_qb_simple.py ./
 COPY test_qb_connection.py ./
 COPY test_qb_container.py ./
+COPY .git/ ./.git/
+
+# 生成版本信息文件（在构建时）
+RUN python version.py > /dev/null 2>&1 || true && \
+    python -c "from version import get_version_info; import json; \
+    with open('version_info.json', 'w') as f: \
+    json.dump(get_version_info(), f)" && \
+    rm -rf ./.git
 
 # 创建必要的目录
 RUN mkdir -p /app/data/logs /app/data/config /app/config

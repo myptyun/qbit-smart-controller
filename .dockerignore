@@ -1,5 +1,5 @@
 # Git
-.git/
+# .git/ - 构建时需要用于生成版本信息，构建后会删除
 .gitignore
 
 # Python

@@ -6,10 +6,22 @@
 
 import subprocess
 import os
+import json
 from datetime import datetime
+from pathlib import Path
 
 def get_git_version():
     """获取基于Git的版本信息"""
+    # 优先从静态版本文件读取（Docker容器中使用）
+    version_file = Path(__file__).parent / "version_info.json"
+    if version_file.exists():
+        try:
+            with open(version_file, 'r') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    
+    # 从Git仓库获取版本信息
     try:
         # 获取最新的提交hash（短版本）
         commit_hash = subprocess.check_output(
