@@ -651,16 +651,22 @@ class QBittorrentManager:
         return True
     
     async def get_valid_cookies(self, instance_config: dict):
-        """获取有效的认证Cookie，如果缓存的SID有效则直接返回，否则重新登录"""
+        """获取有效的认证Cookie，如果缓存的SID有效则直接返回，否则重新登录
+        
+        这个方法确保了：
+        1. 首次请求时自动登录
+        2. 后续请求使用缓存的SID（1小时内有效）
+        3. SID过期后自动重新登录
+        """
         instance_key = f"{instance_config['host']}_{instance_config['username']}"
         
         # 检查是否有有效的缓存SID
         if self._is_sid_valid(instance_key):
-            logger.debug(f"使用缓存的SID: {instance_key}")
+            logger.debug(f"✓ 使用缓存的SID（跳过登录）: {instance_config['name']}")
             return self.cookies.get(instance_key)
         
         # SID无效或不存在，需要重新登录
-        logger.info(f"SID无效或不存在，重新登录: {instance_config['name']}")
+        logger.info(f"⟳ SID无效或不存在，执行登录: {instance_config['name']}")
         login_success = await self.login_to_qbit(instance_config)
         
         if login_success:
@@ -787,24 +793,15 @@ class QBittorrentManager:
         try:
             print(f"🔍 测试QB连接: {instance_config['host']}")
             
-            # 先登录获取 Cookie
-            login_success = await self.login_to_qbit(instance_config)
-            if not login_success:
-                return {
-                    "success": False,
-                    "status": "auth_failed",
-                    "message": "登录失败，请查看上方的详细错误信息"
-                }
-            
             session = await self.get_session()
-            instance_key = f"{instance_config['host']}_{instance_config['username']}"
-            cookies = self.cookies.get(instance_key)
             
+            # 使用缓存机制获取有效的 Cookie（只在需要时才登录）
+            cookies = await self.get_valid_cookies(instance_config)
             if not cookies:
                 return {
                     "success": False,
                     "status": "auth_failed",
-                    "message": "未找到认证 Cookie"
+                    "message": "登录失败，请查看上方的详细错误信息"
                 }
             
             # 使用 Cookie 测试传输信息
