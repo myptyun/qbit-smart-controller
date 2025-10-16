@@ -12,6 +12,20 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from datetime import datetime
 import json
 
+# 导入版本管理模块
+try:
+    from version import get_version_info, get_version_string
+    VERSION_INFO = get_version_info()
+    VERSION_STRING = get_version_string()
+except ImportError:
+    # 如果version.py不存在，使用默认版本
+    VERSION_INFO = {
+        'version': '2.0.0-dev',
+        'build_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'commit_hash': 'unknown'
+    }
+    VERSION_STRING = f"v{VERSION_INFO['version']} (Build: {VERSION_INFO['build_time']})"
+
 print("🚀 开始启动智能 qBittorrent 限速控制器...")
 
 # 设置完善的日志系统
@@ -68,13 +82,13 @@ logger.addHandler(error_handler)
 logger.propagate = False
 
 logger.info("=" * 60)
-logger.info("🚀 智能 qBittorrent 限速控制器 v2.0 启动中...")
+logger.info(f"🚀 智能 qBittorrent 限速控制器 {VERSION_STRING} 启动中...")
 logger.info("=" * 60)
 
 app = FastAPI(
     title="智能 qBittorrent 限速控制器",
     description="基于Lucky设备状态的智能限速控制",
-    version="2.0.0"
+    version=VERSION_INFO['version']
 )
 
 # 创建必要的目录
@@ -1009,7 +1023,10 @@ async def get_status():
     return {
         "status": "running", 
         "message": "智能 qBittorrent 限速控制器服务已启动",
-        "version": "2.0.0",
+        "version": VERSION_INFO['version'],
+        "version_string": VERSION_STRING,
+        "commit_hash": VERSION_INFO['commit_hash'],
+        "build_time": VERSION_INFO['build_time'],
         "timestamp": datetime.now().isoformat(),
         "config_file": str(config_manager.config_file)
     }
@@ -1353,11 +1370,12 @@ if __name__ == "__main__":
     host = web_settings.get("host", "0.0.0.0")
     port = web_settings.get("port", 5000)
     
-    print("=" * 50)
-    print("🚀 智能 qBittorrent 限速控制器 v2.0.0")
-    print("=" * 50)
+    print("=" * 60)
+    print(f"🚀 智能 qBittorrent 限速控制器 {VERSION_STRING}")
+    print("=" * 60)
     print("✅ 所有依赖加载成功，启动 Web 服务器...")
     print(f"📊 服务地址: http://{host}:{port}")
+    print(f"🔖 版本信息: {VERSION_INFO['commit_hash']} ({VERSION_INFO['build_time']})")
     print("🔧 可用端点:")
     print("   /              - Web 界面")
     print("   /api/status    - 服务状态") 
@@ -1368,7 +1386,7 @@ if __name__ == "__main__":
     print("   /api/test/qbit/{index} - 测试QB连接")
     print("   /api/debug/config - 调试配置")
     print("   /health        - 健康检查")
-    print("=" * 50)
+    print("=" * 60)
     
     uvicorn.run(
         app, 

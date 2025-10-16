@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能 qBittorrent 限速控制器 v2.0</title>
+    <title>智能 qBittorrent 限速控制器</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -26,9 +26,10 @@
         <div class="container">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-tachometer-alt me-2"></i>
-                智能 qBittorrent 限速控制器 v2.0
+                智能 qBittorrent 限速控制器
             </a>
             <div class="navbar-text">
+                <span id="version-info" class="text-light me-3"></span>
                 <span id="current-time" class="text-light"></span>
             </div>
         </div>
@@ -402,7 +403,7 @@
 
     <footer class="bg-dark text-light py-3 mt-5">
         <div class="container text-center">
-            <small>智能 qBittorrent 限速控制器 v2.0.0 | 实时监控与智能限速</small>
+            <small id="footer-version">智能 qBittorrent 限速控制器 | 实时监控与智能限速</small>
         </div>
     </footer>
 
@@ -421,6 +422,7 @@
 
             init() {
                 this.updateCurrentTime();
+                this.loadVersionInfo();
                 this.loadConfig();
                 this.startStatusUpdates();
                 this.addLog('系统初始化完成', 'info');
@@ -434,6 +436,34 @@
                 const now = new Date();
                 document.getElementById('current-time').textContent = 
                     now.toLocaleString('zh-CN');
+            }
+
+            async loadVersionInfo() {
+                try {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+                    
+                    // 更新导航栏版本信息
+                    const versionElement = document.getElementById('version-info');
+                    if (versionElement && data.version_string) {
+                        versionElement.textContent = `v${data.version}`;
+                        versionElement.title = data.version_string;
+                    }
+                    
+                    // 更新页脚版本信息
+                    const footerElement = document.getElementById('footer-version');
+                    if (footerElement && data.version_string) {
+                        footerElement.innerHTML = `智能 qBittorrent 限速控制器 v${data.version} | 实时监控与智能限速`;
+                    }
+                    
+                    // 更新页面标题
+                    document.title = `智能 qBittorrent 限速控制器 v${data.version}`;
+                    
+                    this.addLog(`版本信息加载完成: ${data.version_string}`, 'info');
+                } catch (error) {
+                    console.error('加载版本信息失败:', error);
+                    this.addLog('版本信息加载失败', 'error');
+                }
             }
 
             async loadConfig() {
