@@ -13,6 +13,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 # 安装系统依赖
 RUN apt-get update && apt-get install -y \
     curl \
+    git \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
 
@@ -26,6 +27,7 @@ COPY version.py ./
 COPY test_qb_simple.py ./
 COPY test_qb_connection.py ./
 COPY test_qb_container.py ./
+COPY .git/ ./.git/
 
 # 创建必要的目录
 RUN mkdir -p /app/data/logs /app/data/config /app/config
