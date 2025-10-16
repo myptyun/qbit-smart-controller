@@ -26,7 +26,7 @@ except ImportError:
     }
     VERSION_STRING = f"v{VERSION_INFO['version']} (Build: {VERSION_INFO['build_time']})"
 
-print("🚀 开始启动智能 qBittorrent 限速控制器...")
+print("🚀 开始启动 SpeedHiveHome...")
 
 # 设置完善的日志系统
 from logging.handlers import RotatingFileHandler
@@ -82,11 +82,11 @@ logger.addHandler(error_handler)
 logger.propagate = False
 
 logger.info("=" * 60)
-logger.info(f"🚀 智能 qBittorrent 限速控制器 {VERSION_STRING} 启动中...")
+logger.info(f"🚀 SpeedHiveHome {VERSION_STRING} 启动中...")
 logger.info("=" * 60)
 
 app = FastAPI(
-    title="智能 qBittorrent 限速控制器",
+    title="SpeedHiveHome",
     description="基于Lucky设备状态的智能限速控制",
     version=VERSION_INFO['version']
 )
@@ -1022,7 +1022,7 @@ async def get_status():
     config = config_manager.load_config()
     return {
         "status": "running", 
-        "message": "智能 qBittorrent 限速控制器服务已启动",
+        "message": "SpeedHiveHome 服务已启动",
         "version": VERSION_INFO['version'],
         "version_string": VERSION_STRING,
         "commit_hash": VERSION_INFO['commit_hash'],

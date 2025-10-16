@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能 qBittorrent 限速控制器</title>
+    <title>SpeedHiveHome</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -26,7 +26,7 @@
         <div class="container">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-tachometer-alt me-2"></i>
-                智能 qBittorrent 限速控制器
+                SpeedHiveHome
             </a>
             <div class="navbar-text">
                 <span id="version-info" class="text-light me-3"></span>
@@ -403,7 +403,7 @@
 
     <footer class="bg-dark text-light py-3 mt-5">
         <div class="container text-center">
-            <small id="footer-version">智能 qBittorrent 限速控制器 | 实时监控与智能限速</small>
+            <small id="footer-version">SpeedHiveHome | 实时监控与智能限速</small>
         </div>
     </footer>
 
@@ -453,11 +453,11 @@
                     // 更新页脚版本信息
                     const footerElement = document.getElementById('footer-version');
                     if (footerElement && data.version_string) {
-                        footerElement.innerHTML = `智能 qBittorrent 限速控制器 v${data.version} | 实时监控与智能限速`;
+                        footerElement.innerHTML = `SpeedHiveHome v${data.version} | 实时监控与智能限速`;
                     }
                     
                     // 更新页面标题
-                    document.title = `智能 qBittorrent 限速控制器 v${data.version}`;
+                    document.title = `SpeedHiveHome v${data.version}`;
                     
                     this.addLog(`版本信息加载完成: ${data.version_string}`, 'info');
                 } catch (error) {

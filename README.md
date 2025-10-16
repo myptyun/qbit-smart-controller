@@ -1,4 +1,4 @@
-# 🚀 智能 qBittorrent 限速控制器 v2.0
+# 🚀 SpeedHiveHome
 
 基于 Lucky 软路由设备状态的智能 qBittorrent 限速控制系统。当 Lucky 检测到网络活动时，自动限制 qBittorrent 的上传/下载速度，确保不影响正常上网体验。
 
