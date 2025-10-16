@@ -581,24 +581,136 @@ class SpeedController:
         instances = config.get("qbittorrent_instances", [])
         
         success_count = 0
+        failed_instances = []
+        
         for instance in instances:
             if not instance.get("enabled", True):
                 continue
                 
-            try:
-                success = await self.qbit_manager.set_speed_limits(
-                    instance, download_limit, upload_limit
-                )
-                if success:
-                    success_count += 1
-                    logger.info(f"✅ {instance['name']} 恢复全速成功")
-                else:
-                    logger.error(f"❌ {instance['name']} 恢复全速失败")
-            except Exception as e:
-                logger.error(f"❌ {instance['name']} 恢复全速异常: {e}")
+            # 尝试恢复，带重试机制
+            success = await self._restore_instance_with_retry(instance, download_limit, upload_limit)
+            
+            if success:
+                success_count += 1
+                logger.info(f"✅ {instance['name']} 恢复全速成功")
+            else:
+                failed_instances.append(instance)
+                logger.error(f"❌ {instance['name']} 恢复全速失败")
         
         self.last_action_time = datetime.now()
         logger.info(f"📊 全速恢复完成: {success_count}/{len(instances)} 个实例成功")
+        
+        # 如果有失败的实例，记录并尝试降级处理
+        if failed_instances:
+            await self._handle_failed_instances(failed_instances, download_limit, upload_limit)
+    
+    async def _restore_instance_with_retry(self, instance: dict, download_limit: int, upload_limit: int, max_retries: int = 3) -> bool:
+        """带重试机制的实例恢复"""
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"🔄 {instance['name']} - 恢复尝试 {attempt + 1}/{max_retries}")
+                
+                # 如果是重试，先清除可能的过期缓存
+                if attempt > 0:
+                    instance_key = f"{instance['host']}_{instance['username']}"
+                    if instance_key in self.qbit_manager.cookies:
+                        del self.qbit_manager.cookies[instance_key]
+                    if instance_key in self.qbit_manager.sid_cache:
+                        del self.qbit_manager.sid_cache[instance_key]
+                    logger.info(f"🔄 {instance['name']} - 已清除缓存，准备重新认证")
+                    
+                    # 等待一段时间再重试
+                    await asyncio.sleep(2 * attempt)
+                
+                success = await self.qbit_manager.set_speed_limits(instance, download_limit, upload_limit)
+                
+                if success:
+                    logger.info(f"✅ {instance['name']} - 恢复成功 (尝试 {attempt + 1})")
+                    return True
+                else:
+                    logger.warning(f"⚠️ {instance['name']} - 恢复失败 (尝试 {attempt + 1})")
+                    
+            except Exception as e:
+                logger.error(f"❌ {instance['name']} - 恢复异常 (尝试 {attempt + 1}): {e}")
+        
+        logger.error(f"❌ {instance['name']} - 所有重试均失败")
+        return False
+    
+    async def _handle_failed_instances(self, failed_instances: list, download_limit: int, upload_limit: int):
+        """处理恢复失败的实例"""
+        logger.warning(f"🚨 {len(failed_instances)} 个实例恢复失败，开始降级处理")
+        
+        for instance in failed_instances:
+            instance_name = instance['name']
+            logger.warning(f"🔧 开始处理失败实例: {instance_name}")
+            
+            # 1. 尝试重新连接测试
+            try:
+                test_result = await self.qbit_manager.test_connection(instance)
+                if test_result.get("success"):
+                    logger.info(f"✅ {instance_name} - 连接测试成功，尝试最后一次恢复")
+                    # 最后一次尝试
+                    success = await self.qbit_manager.set_speed_limits(instance, download_limit, upload_limit)
+                    if success:
+                        logger.info(f"✅ {instance_name} - 最终恢复成功")
+                        continue
+                else:
+                    logger.error(f"❌ {instance_name} - 连接测试失败: {test_result.get('message', '未知错误')}")
+            except Exception as e:
+                logger.error(f"❌ {instance_name} - 连接测试异常: {e}")
+            
+            # 2. 记录失败实例到文件，供后续手动处理
+            await self._record_failed_instance(instance, download_limit, upload_limit)
+            
+            # 3. 发送告警（如果有配置）
+            await self._send_failure_alert(instance)
+    
+    async def _record_failed_instance(self, instance: dict, download_limit: int, upload_limit: int):
+        """记录失败的实例到文件"""
+        try:
+            failed_file = Path("data/logs/failed_instances.json")
+            failed_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            failure_record = {
+                "timestamp": datetime.now().isoformat(),
+                "instance": instance,
+                "target_limits": {
+                    "download": download_limit,
+                    "upload": upload_limit
+                },
+                "action": "restore_normal_speed",
+                "status": "failed"
+            }
+            
+            # 读取现有记录
+            existing_records = []
+            if failed_file.exists():
+                try:
+                    with open(failed_file, 'r', encoding='utf-8') as f:
+                        existing_records = json.load(f)
+                except:
+                    existing_records = []
+            
+            # 添加新记录
+            existing_records.append(failure_record)
+            
+            # 只保留最近50条记录
+            if len(existing_records) > 50:
+                existing_records = existing_records[-50:]
+            
+            # 写入文件
+            with open(failed_file, 'w', encoding='utf-8') as f:
+                json.dump(existing_records, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"📝 {instance['name']} - 失败记录已保存到 {failed_file}")
+            
+        except Exception as e:
+            logger.error(f"❌ 保存失败记录异常: {e}")
+    
+    async def _send_failure_alert(self, instance: dict):
+        """发送失败告警（预留接口）"""
+        # 这里可以扩展为发送邮件、微信通知等
+        logger.warning(f"🚨 告警: {instance['name']} 恢复全速失败，需要手动处理")
     
     def get_controller_state(self) -> dict:
         """获取控制器状态"""
@@ -1362,6 +1474,105 @@ async def stop_controller():
     """手动停止控制器"""
     await speed_controller.stop()
     return {"message": "控制器已停止", "status": "stopped"}
+
+@app.post("/api/controller/restore/{instance_index}")
+async def manual_restore_instance(instance_index: int):
+    """手动恢复指定实例的全速"""
+    try:
+        config = config_manager.load_config()
+        instances = config.get("qbittorrent_instances", [])
+        
+        if instance_index < 0 or instance_index >= len(instances):
+            raise HTTPException(status_code=404, detail="实例不存在")
+        
+        instance = instances[instance_index]
+        settings = config.get("controller_settings", {})
+        download_limit = settings.get("normal_download", 0)
+        upload_limit = settings.get("normal_upload", 0)
+        
+        logger.info(f"🔧 手动恢复实例: {instance['name']}")
+        
+        # 使用重试机制恢复
+        success = await speed_controller._restore_instance_with_retry(
+            instance, download_limit, upload_limit, max_retries=5
+        )
+        
+        if success:
+            return {
+                "message": f"实例 {instance['name']} 恢复成功",
+                "status": "success",
+                "instance": instance['name'],
+                "limits": {
+                    "download": download_limit,
+                    "upload": upload_limit
+                }
+            }
+        else:
+            return {
+                "message": f"实例 {instance['name']} 恢复失败",
+                "status": "failed",
+                "instance": instance['name'],
+                "suggestion": "请检查实例连接状态或手动重启qBittorrent"
+            }
+            
+    except Exception as e:
+        logger.error(f"手动恢复实例异常: {e}")
+        raise HTTPException(status_code=500, detail=f"恢复失败: {str(e)}")
+
+@app.post("/api/controller/restore-all")
+async def manual_restore_all_instances():
+    """手动恢复所有实例的全速"""
+    try:
+        config = config_manager.load_config()
+        settings = config.get("controller_settings", {})
+        download_limit = settings.get("normal_download", 0)
+        upload_limit = settings.get("normal_upload", 0)
+        
+        logger.info("🔧 手动恢复所有实例")
+        
+        # 直接调用恢复方法
+        await speed_controller._apply_normal_mode(settings)
+        
+        return {
+            "message": "所有实例恢复操作已完成",
+            "status": "success",
+            "limits": {
+                "download": download_limit,
+                "upload": upload_limit
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"手动恢复所有实例异常: {e}")
+        raise HTTPException(status_code=500, detail=f"恢复失败: {str(e)}")
+
+@app.get("/api/controller/failed-instances")
+async def get_failed_instances():
+    """获取失败的实例记录"""
+    try:
+        failed_file = Path("data/logs/failed_instances.json")
+        
+        if not failed_file.exists():
+            return {
+                "message": "没有失败记录",
+                "failed_instances": []
+            }
+        
+        with open(failed_file, 'r', encoding='utf-8') as f:
+            failed_records = json.load(f)
+        
+        # 只返回最近10条记录
+        recent_records = failed_records[-10:] if len(failed_records) > 10 else failed_records
+        
+        return {
+            "message": f"找到 {len(failed_records)} 条失败记录",
+            "failed_instances": recent_records,
+            "total_count": len(failed_records)
+        }
+        
+    except Exception as e:
+        logger.error(f"获取失败记录异常: {e}")
+        raise HTTPException(status_code=500, detail=f"获取失败记录失败: {str(e)}")
 
 @app.get("/health")
 async def health_check():
