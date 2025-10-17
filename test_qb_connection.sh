@@ -24,10 +24,10 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# 提取 QB 配置（使用简单的 grep）
-QB_HOST=$(grep -A 5 "qbittorrent_instances:" "$CONFIG_FILE" | grep "host:" | head -1 | awk '{print $2}' | tr -d '"')
-QB_USER=$(grep -A 5 "qbittorrent_instances:" "$CONFIG_FILE" | grep "username:" | head -1 | awk '{print $2}' | tr -d '"')
-QB_PASS=$(grep -A 5 "qbittorrent_instances:" "$CONFIG_FILE" | grep "password:" | head -1 | awk '{print $2}' | tr -d '"')
+# 提取 QB 配置（使用简单的 grep，扩大搜索范围）
+QB_HOST=$(grep -A 10 "qbittorrent_instances:" "$CONFIG_FILE" | grep "host:" | head -1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+QB_USER=$(grep -A 10 "qbittorrent_instances:" "$CONFIG_FILE" | grep "username:" | head -1 | awk '{print $2}' | tr -d '"' | tr -d "'")
+QB_PASS=$(grep -A 10 "qbittorrent_instances:" "$CONFIG_FILE" | grep "password:" | head -1 | awk '{print $2}' | tr -d '"' | tr -d "'")
 
 echo -e "${BLUE}配置信息:${NC}"
 echo -e "   Host: $QB_HOST"
