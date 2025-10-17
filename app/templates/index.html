@@ -911,37 +911,44 @@
                         console.log('Device raw_data:', device.raw_data);
                         
                         if (device.success && device.raw_data) {
-                            // 使用正确的字段名：ruleList
-                            let proxyList = device.raw_data.ruleList;
+                            // 使用正确的数据结构：ruleList[0].ProxyList
+                            let ruleList = device.raw_data.ruleList;
                             let statistics = device.raw_data.statistics || {};
                             
-                            console.log('RuleList found:', proxyList);
+                            console.log('RuleList found:', ruleList);
                             console.log('Statistics found:', statistics);
                             
-                            if (Array.isArray(proxyList)) {
-                                totalServices += proxyList.length;
-                                console.log(`Found ${proxyList.length} services in ruleList`);
+                            if (Array.isArray(ruleList) && ruleList.length > 0) {
+                                // 从第一个规则中获取ProxyList
+                                let proxyList = ruleList[0].ProxyList || [];
+                                let ruleKey = ruleList[0].RuleKey || '';
                                 
-                                proxyList.forEach((proxy, index) => {
-                                    console.log(`=== Processing proxy ${index} ===`);
-                                    console.log('Full proxy object:', JSON.stringify(proxy, null, 2));
-                                    console.log('Service Enable:', proxy.Enable);
-                                    console.log('Service DisplayInFrontendList:', proxy.DisplayInFrontendList);
-                                    console.log('Service Remark:', proxy.Remark);
-                                    console.log('Service Key:', proxy.Key);
-                                    console.log('Service WebServiceType:', proxy.WebServiceType);
-                                    console.log('Service Locations:', proxy.Locations);
-                                    console.log('Service Domains:', proxy.Domains);
+                                console.log(`Found rule: ${ruleList[0].RuleName} (Key: ${ruleKey})`);
+                                console.log(`Found ${proxyList.length} services in ProxyList`);
+                                
+                                if (Array.isArray(proxyList)) {
+                                    totalServices += proxyList.length;
                                     
-                                    // 尝试不同的字段名
-                                    console.log('All proxy keys:', Object.keys(proxy));
-                                    
-                                    // 显示所有启用的服务（不限制DisplayInFrontendList）
-                                    if (proxy.Enable) {
+                                    proxyList.forEach((proxy, index) => {
+                                        console.log(`=== Processing proxy ${index} ===`);
+                                        console.log('Full proxy object:', JSON.stringify(proxy, null, 2));
+                                        console.log('Service Enable:', proxy.Enable);
+                                        console.log('Service Remark:', proxy.Remark);
+                                        console.log('Service Key:', proxy.Key);
+                                        console.log('Service WebServiceType:', proxy.WebServiceType);
+                                        console.log('Service Locations:', proxy.Locations);
+                                        console.log('Service Domains:', proxy.Domains);
+                                        
+                                        // 显示所有启用的服务
+                                        if (proxy.Enable) {
                                         enabledServices++;
                                         // 从statistics中获取该服务的连接和速度信息
                                         const proxyKey = proxy.Key;
-                                        const stats = statistics[proxyKey] || {};
+                                        const ruleStats = statistics[ruleKey] || {};
+                                        const proxyStats = ruleStats.ProxyList || {};
+                                        const stats = proxyStats[proxyKey] || {};
+                                        
+                                        console.log(`Statistics for ${proxyKey}:`, stats);
                                         
                                         // 尝试不同的字段名获取服务名称
                                         const serviceName = proxy.Remark || 
@@ -976,11 +983,11 @@
                                             locations: locations,
                                             domains: domains,
                                             // 从statistics获取连接数和速度
-                                            connections: stats.Connections || stats.connections || 0,
-                                            download_speed: stats.DownloadSpeed || stats.downloadSpeed || 0,
-                                            upload_speed: stats.UploadSpeed || stats.uploadSpeed || 0,
-                                            download_bytes: stats.DownloadBytes || stats.downloadBytes || 0,
-                                            upload_bytes: stats.UploadBytes || stats.uploadBytes || 0,
+                                            connections: stats.Connections || 0,
+                                            download_speed: stats.InSpeed || 0,
+                                            upload_speed: stats.OutSpeed || 0,
+                                            download_bytes: stats.TrafficIn || 0,
+                                            upload_bytes: stats.TrafficOut || 0,
                                             last_update: device.last_update
                                         });
                                     }

@@ -480,32 +480,45 @@ class LuckyMonitor:
             # 从ruleList中提取服务信息
             if "ruleList" in data and isinstance(data["ruleList"], list):
                 for rule in data["ruleList"]:
-                    service_info = {
-                        "key": rule.get("Key", ""),
-                        "service_type": rule.get("WebServiceType", "unknown"),
-                        "enabled": rule.get("Enable", False),
-                        "locations": rule.get("Locations", []),
-                        "domains": rule.get("Domains", []),
-                        "Remark": rule.get("Remark", ""),  # 保持原始字段名
-                        "last_error": rule.get("LastErrMsg", ""),
-                        "cache_enabled": rule.get("CacheEnabled", False),
-                        "cache_size": rule.get("CaCheTotalSize", 0),
-                        "cache_files": rule.get("CacheFilesTotal", 0),
-                        "display_in_frontend": rule.get("DisplayInFrontendList", True),
-                        "coraza_waf": rule.get("CorazaWAF", False),
-                        "safe_ip_mode": rule.get("SafeIPMode", ""),
-                        "safe_user_agent_mode": rule.get("SafeUserAgentMode", ""),
-                        "basic_auth_enabled": rule.get("EnableBasicAuth", False),
-                        "basic_auth_users": rule.get("BasicAuthUserList", ""),
-                        "custom_output": rule.get("CustomOutputText", "")
-                    }
+                    rule_key = rule.get("RuleKey", "")
+                    print(f"📋 处理规则: {rule.get('RuleName', 'Unknown')} (Key: {rule_key})")
                     
-                    # 只显示启用的服务（不限制display_in_frontend）
-                    if service_info["enabled"]:
-                        services_info.append(service_info)
-                        print(f"  📡 服务 {service_info['Remark']}: {service_info['service_type']}")
+                    # 从ProxyList中提取每个代理服务
+                    proxy_list = rule.get("ProxyList", [])
+                    if isinstance(proxy_list, list):
+                        print(f"  📡 找到 {len(proxy_list)} 个代理服务")
+                        
+                        for proxy in proxy_list:
+                            service_info = {
+                                "key": proxy.get("Key", ""),
+                                "service_type": proxy.get("WebServiceType", "unknown"),
+                                "enabled": proxy.get("Enable", False),
+                                "locations": proxy.get("Locations", []),
+                                "domains": proxy.get("Domains", []),
+                                "Remark": proxy.get("Remark", ""),  # 保持原始字段名
+                                "last_error": proxy.get("LastErrMsg", ""),
+                                "cache_enabled": proxy.get("CacheEnabled", False),
+                                "cache_size": proxy.get("CaCheTotalSize", 0),
+                                "cache_files": proxy.get("CacheFilesTotal", 0),
+                                "display_in_frontend": proxy.get("DisplayInFrontendList", True),
+                                "coraza_waf": proxy.get("CorazaWAF", False),
+                                "safe_ip_mode": proxy.get("SafeIPMode", ""),
+                                "safe_user_agent_mode": proxy.get("SafeUserAgentMode", ""),
+                                "basic_auth_enabled": proxy.get("EnableBasicAuth", False),
+                                "basic_auth_users": proxy.get("BasicAuthUserList", ""),
+                                "custom_output": proxy.get("CustomOutputText", "")
+                            }
+                            
+                            # 只显示启用的服务（不限制display_in_frontend）
+                            if service_info["enabled"]:
+                                services_info.append(service_info)
+                                print(f"    ✅ 服务 {service_info['Remark']}: {service_info['service_type']}")
+                            else:
+                                print(f"    ❌ 服务 {service_info['Remark']}: 已禁用")
+                    else:
+                        print(f"  ⚠️ ProxyList 不是数组: {type(proxy_list)}")
             
-            print(f"📊 解析到 {len(services_info)} 个服务信息")
+            print(f"📊 解析到 {len(services_info)} 个启用的服务信息")
             return services_info
             
         except Exception as e:
