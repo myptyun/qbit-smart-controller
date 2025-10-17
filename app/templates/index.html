@@ -337,6 +337,12 @@
             max-width: 100% !important;
         }
         
+        /* 强制所有列都有相同的宽度 */
+        #overview-cards .col-3 {
+            flex: 0 0 25% !important;
+            max-width: 25% !important;
+        }
+        
         /* 为固定卡片调整页面内容的上边距 */
         .container {
             margin-top: 250px; /* 为固定卡片和导航栏留出空间 */
@@ -384,53 +390,53 @@
         <div class="container">
             <div class="row">
                 <div class="col-3">
-                <div class="overview-card">
-                    <div class="card-icon">
-                        <i class="fas fa-satellite-dish text-primary"></i>
-                    </div>
-                    <div class="card-number text-primary" id="lucky-devices-count">0</div>
-                    <div class="card-text">
-                        <div class="card-label">Lucky 设备</div>
-                        <div class="card-subtitle" id="lucky-active-count">0 个活跃</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-3">
-                <div class="overview-card">
-                    <div class="card-icon">
-                        <i class="fas fa-server text-success"></i>
+                    <div class="overview-card">
+                        <div class="card-icon">
+                            <i class="fas fa-satellite-dish text-primary"></i>
                         </div>
-                    <div class="card-number text-success" id="qbit-instances-count">0</div>
-                    <div class="card-text">
-                        <div class="card-label">QB 实例</div>
-                        <div class="card-subtitle" id="qbit-active-count">0 个在线</div>
+                        <div class="card-number text-primary" id="lucky-devices-count">0</div>
+                        <div class="card-text">
+                            <div class="card-label">Lucky 设备</div>
+                            <div class="card-subtitle" id="lucky-active-count">0 个活跃</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-3">
-                <div class="overview-card system-status-card" id="limit-status-card">
-                    <div class="card-icon">
-                        <i class="fas fa-shield-alt"></i>
-        </div>
-                    <div class="card-number" id="connection-status">正常</div>
-                    <div class="card-text">
-                        <div class="card-label">限速状态</div>
-                        <div class="card-subtitle" id="active-connections">无活跃连接</div>
+                <div class="col-3">
+                    <div class="overview-card">
+                        <div class="card-icon">
+                            <i class="fas fa-server text-success"></i>
+                        </div>
+                        <div class="card-number text-success" id="qbit-instances-count">0</div>
+                        <div class="card-text">
+                            <div class="card-label">QB 实例</div>
+                            <div class="card-subtitle" id="qbit-active-count">0 个在线</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-3">
-                <div class="overview-card">
-                    <div class="card-icon">
-                        <i class="fas fa-clock text-warning"></i>
-                    </div>
-                    <div class="card-number text-warning" id="next-check">2s</div>
-                    <div class="card-text">
-                        <div class="card-label">下次检查</div>
-                        <div class="card-subtitle" id="last-collection-time">-</div>
+                <div class="col-3">
+                    <div class="overview-card system-status-card" id="limit-status-card">
+                        <div class="card-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="card-number" id="connection-status">正常</div>
+                        <div class="card-text">
+                            <div class="card-label">限速状态</div>
+                            <div class="card-subtitle" id="active-connections">无活跃连接</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+                <div class="col-3">
+                    <div class="overview-card">
+                        <div class="card-icon">
+                            <i class="fas fa-clock text-warning"></i>
+                        </div>
+                        <div class="card-number text-warning" id="next-check">2s</div>
+                        <div class="card-text">
+                            <div class="card-label">下次检查</div>
+                            <div class="card-subtitle" id="last-collection-time">-</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
