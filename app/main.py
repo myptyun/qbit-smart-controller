@@ -192,7 +192,6 @@ class LuckyMonitor:
                 force_close=False,  # 复用连接
                 enable_cleanup_closed=True,
                 keepalive_timeout=60,  # Keep-Alive 超时
-                limit_per_host=8,
                 resolver=aiohttp.AsyncResolver(),  # 异步DNS解析器
                 family=0,  # 允许IPv4和IPv6
                 use_dns_cache=True
