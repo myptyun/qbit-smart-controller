@@ -311,8 +311,8 @@
         
         /* 让悬浮卡片内容与下面表格同宽 */
         #overview-cards .container {
-            max-width: 1200px; /* 与Bootstrap container同宽 */
-            margin: 0 auto;
+            max-width: none; /* 占满整个屏幕宽度，与下面表格一致 */
+            margin: 0;
             padding: 0 15px;
         }
         
@@ -1371,11 +1371,11 @@
                         } else {
                             activeConnElement.textContent = '无活跃连接';
                         }
+                        }
                     }
-                }
-                
+                    
                 // 更新服务状态（如果元素存在）
-                const serviceStatus = document.getElementById('service-status');
+                    const serviceStatus = document.getElementById('service-status');
                 if (serviceStatus && controllerState) {
                     if (controllerState.running) {
                         serviceStatus.className = 'badge bg-success';
