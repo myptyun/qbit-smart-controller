@@ -371,10 +371,11 @@
         </div>
     </nav>
 
-    <div class="container">
-        <!-- 状态概览 - 采用新的卡片设计 -->
-        <div class="row mb-4" id="overview-cards">
-            <div class="col-lg-3 col-md-6 mb-3">
+    <!-- 状态概览 - 采用新的卡片设计 -->
+    <div id="overview-cards">
+        <div class="container">
+            <div class="row">
+                <div class="col-3">
                 <div class="overview-card">
                     <div class="card-icon">
                         <i class="fas fa-satellite-dish text-primary"></i>
@@ -383,10 +384,10 @@
                     <div class="card-text">
                         <div class="card-label">Lucky 设备</div>
                         <div class="card-subtitle" id="lucky-active-count">0 个活跃</div>
-                            </div>
-                            </div>
-                            </div>
-            <div class="col-lg-3 col-md-6 mb-3">
+                    </div>
+                </div>
+            </div>
+            <div class="col-3">
                 <div class="overview-card">
                     <div class="card-icon">
                         <i class="fas fa-server text-success"></i>
@@ -398,7 +399,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 mb-3">
+            <div class="col-3">
                 <div class="overview-card system-status-card" id="limit-status-card">
                     <div class="card-icon">
                         <i class="fas fa-shield-alt"></i>
@@ -410,7 +411,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6 mb-3">
+            <div class="col-3">
                 <div class="overview-card">
                     <div class="card-icon">
                         <i class="fas fa-clock text-warning"></i>
@@ -422,8 +423,11 @@
                     </div>
                 </div>
             </div>
+            </div>
         </div>
+    </div>
 
+    <div class="container">
         <!-- 设备状态表格展示区域 -->
         <div class="row">
             <!-- Lucky设备总览 -->
