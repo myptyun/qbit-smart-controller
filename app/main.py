@@ -1553,7 +1553,7 @@ async def debug_qbit_connection(instance_index: int):
                         "success": response.status == 200,
                         "message": f"HTTP {response.status} - {content[:100]}",
                         "cookies_received": len(cookies),
-                        "cookie_names": [cookie.key for cookie in cookies],
+                        "cookie_names": list(cookies.keys()),
                         "response_headers": dict(response.headers)
                     })
                     
