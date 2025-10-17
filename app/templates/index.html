@@ -925,44 +925,75 @@
                 const container = document.getElementById('lucky-table-content');
                 let proxyServices = [];
                 
+                // 调试信息：打印接收到的数据结构
+                console.log('Lucky Status Data:', luckyStatus);
+                
                 // 处理Lucky设备，提取ProxyList中的详细服务信息
                 if (luckyStatus.devices && luckyStatus.devices.length > 0) {
                     luckyStatus.devices.forEach(device => {
-                        if (device.success && device.raw_data && device.raw_data.ProxyList) {
-                            device.raw_data.ProxyList.forEach(proxy => {
-                                // 只显示启用的服务
-                                if (proxy.Enable && proxy.DisplayInFrontendList) {
-                                    proxyServices.push({
-                                        device_name: device.device_name,
-                                        service_name: proxy.Remark || '未命名服务',
-                                        service_type: proxy.WebServiceType || 'unknown',
-                                        enabled: proxy.Enable,
-                                        key: proxy.Key,
-                                        locations: proxy.Locations || [],
-                                        domains: proxy.Domains || [],
-                                        last_error: proxy.LastErrMsg || '',
-                                        cache_enabled: proxy.CacheEnabled || false,
-                                        cache_size: proxy.CaCheTotalSize || 0,
-                                        cache_files: proxy.CacheFilesTotal || 0,
-                                        safe_ip_mode: proxy.SafeIPMode || '',
-                                        safe_user_agent_mode: proxy.SafeUserAgentMode || '',
-                                        basic_auth_enabled: proxy.EnableBasicAuth || false,
-                                        basic_auth_users: proxy.BasicAuthUserList || '',
-                                        custom_output: proxy.CustomOutputText || '',
-                                        coraza_waf: proxy.CorazaWAF || false,
-                                        last_update: device.last_update
-                                    });
-                                }
-                            });
+                        console.log('Device:', device);
+                        console.log('Device raw_data:', device.raw_data);
+                        
+                        if (device.success && device.raw_data) {
+                            // 检查不同的可能字段名
+                            let proxyList = device.raw_data.ProxyList || 
+                                          device.raw_data.proxyList || 
+                                          device.raw_data.ruleList ||
+                                          device.raw_data.rules ||
+                                          device.raw_data;
+                            
+                            console.log('ProxyList found:', proxyList);
+                            
+                            if (Array.isArray(proxyList)) {
+                                proxyList.forEach(proxy => {
+                                    console.log('Processing proxy:', proxy);
+                                    // 只显示启用的服务
+                                    if (proxy.Enable && proxy.DisplayInFrontendList) {
+                                        proxyServices.push({
+                                            device_name: device.device_name,
+                                            service_name: proxy.Remark || '未命名服务',
+                                            service_type: proxy.WebServiceType || 'unknown',
+                                            enabled: proxy.Enable,
+                                            key: proxy.Key,
+                                            locations: proxy.Locations || [],
+                                            domains: proxy.Domains || [],
+                                            last_error: proxy.LastErrMsg || '',
+                                            cache_enabled: proxy.CacheEnabled || false,
+                                            cache_size: proxy.CaCheTotalSize || 0,
+                                            cache_files: proxy.CacheFilesTotal || 0,
+                                            safe_ip_mode: proxy.SafeIPMode || '',
+                                            safe_user_agent_mode: proxy.SafeUserAgentMode || '',
+                                            basic_auth_enabled: proxy.EnableBasicAuth || false,
+                                            basic_auth_users: proxy.BasicAuthUserList || '',
+                                            custom_output: proxy.CustomOutputText || '',
+                                            coraza_waf: proxy.CorazaWAF || false,
+                                            last_update: device.last_update
+                                        });
+                                    }
+                                });
+                            }
                         }
                     });
                 }
                 
                 if (proxyServices.length === 0) {
+                    let debugInfo = '';
+                    if (luckyStatus.devices && luckyStatus.devices.length > 0) {
+                        debugInfo = `<br><small class="text-muted">调试信息: 找到 ${luckyStatus.devices.length} 个设备</small>`;
+                        luckyStatus.devices.forEach((device, index) => {
+                            debugInfo += `<br><small class="text-muted">设备${index + 1}: ${device.device_name} - 成功: ${device.success}</small>`;
+                            if (device.raw_data) {
+                                debugInfo += `<br><small class="text-muted">raw_data字段: ${Object.keys(device.raw_data).join(', ')}</small>`;
+                            }
+                        });
+                    }
+                    
                     container.innerHTML = `
                         <div class="text-center py-4 text-muted">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
                             <p>暂无Lucky代理服务数据</p>
+                            <p>请检查Lucky设备配置和API连接</p>
+                            ${debugInfo}
                         </div>
                     `;
                     return;
