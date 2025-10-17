@@ -945,8 +945,12 @@
                             if (Array.isArray(proxyList)) {
                                 proxyList.forEach(proxy => {
                                     console.log('Processing proxy:', proxy);
-                                    // 只显示启用的服务
-                                    if (proxy.Enable && proxy.DisplayInFrontendList) {
+                                    console.log('Service Enable:', proxy.Enable);
+                                    console.log('Service DisplayInFrontendList:', proxy.DisplayInFrontendList);
+                                    console.log('Service Remark:', proxy.Remark);
+                                    
+                                    // 显示所有启用的服务（不限制DisplayInFrontendList）
+                                    if (proxy.Enable) {
                                         // 从statistics中获取该服务的连接和速度信息
                                         const proxyKey = proxy.Key;
                                         const stats = statistics[proxyKey] || {};
@@ -982,6 +986,11 @@
                             debugInfo += `<br><small class="text-muted">设备${index + 1}: ${device.device_name} - 成功: ${device.success}</small>`;
                             if (device.raw_data) {
                                 debugInfo += `<br><small class="text-muted">raw_data字段: ${Object.keys(device.raw_data).join(', ')}</small>`;
+                                if (device.raw_data.ruleList) {
+                                    debugInfo += `<br><small class="text-muted">ruleList数量: ${device.raw_data.ruleList.length}</small>`;
+                                    const enabledServices = device.raw_data.ruleList.filter(rule => rule.Enable);
+                                    debugInfo += `<br><small class="text-muted">启用服务数量: ${enabledServices.length}</small>`;
+                                }
                             }
                         });
                     }
