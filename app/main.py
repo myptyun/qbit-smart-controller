@@ -486,7 +486,7 @@ class LuckyMonitor:
                         "enabled": rule.get("Enable", False),
                         "locations": rule.get("Locations", []),
                         "domains": rule.get("Domains", []),
-                        "remark": rule.get("Remark", ""),
+                        "Remark": rule.get("Remark", ""),  # 保持原始字段名
                         "last_error": rule.get("LastErrMsg", ""),
                         "cache_enabled": rule.get("CacheEnabled", False),
                         "cache_size": rule.get("CaCheTotalSize", 0),
@@ -500,10 +500,10 @@ class LuckyMonitor:
                         "custom_output": rule.get("CustomOutputText", "")
                     }
                     
-                    # 只显示启用的服务
-                    if service_info["enabled"] and service_info["display_in_frontend"]:
+                    # 只显示启用的服务（不限制display_in_frontend）
+                    if service_info["enabled"]:
                         services_info.append(service_info)
-                        print(f"  📡 服务 {service_info['remark']}: {service_info['service_type']}")
+                        print(f"  📡 服务 {service_info['Remark']}: {service_info['service_type']}")
             
             print(f"📊 解析到 {len(services_info)} 个服务信息")
             return services_info
