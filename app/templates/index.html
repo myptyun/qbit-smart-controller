@@ -926,6 +926,11 @@
                         fetch('/api/controller/state').then(r => r.json())
                     ]);
 
+                    // 添加调试信息
+                    console.log('API Response - Lucky Status:', luckyStatus);
+                    console.log('API Response - QB Status:', qbitStatus);
+                    console.log('API Response - Controller State:', controllerState);
+
                     this.renderDevicesTable(luckyStatus, qbitStatus);
                     this.updateOverview(luckyStatus, qbitStatus, controllerState);
                     this.lastUpdate = new Date();
@@ -1293,9 +1298,16 @@
             }
 
             renderDevicesTable(luckyStatus, qbitStatus) {
-                // 分别渲染两个表格
-                this.renderQbitTable(qbitStatus);
-                this.renderLuckyTable(luckyStatus);
+                try {
+                    console.log('Rendering devices table...');
+                    // 分别渲染两个表格
+                    this.renderQbitTable(qbitStatus);
+                    this.renderLuckyTable(luckyStatus);
+                    console.log('Devices table rendered successfully');
+                } catch (error) {
+                    console.error('Error rendering devices table:', error);
+                    this.addLog('渲染设备表格失败: ' + error.message, 'error');
+                }
             }
 
             renderLuckyStatus(status) {
