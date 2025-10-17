@@ -347,7 +347,7 @@
         
         /* 第一个和最后一个卡片靠齐边缘 */
         #overview-cards .col-2:first-child {
-            padding-left: 0;
+            padding-left: 6px;
             padding-right: 4px;
         }
         
@@ -404,7 +404,7 @@
         
         /* 为固定卡片调整页面内容的上边距 */
         .container {
-            margin-top: 250px; /* 为固定卡片和导航栏留出空间 */
+            margin-top: 120px; /* 减少上边距，让内容直接跟在悬浮卡片下面 */
         }
         
         /* 响应式调整 */
@@ -431,15 +431,15 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
+    <nav class="navbar navbar-expand-lg mb-3" style="background: transparent;">
         <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="#" style="color: #6c757d;">
                 <i class="fas fa-tachometer-alt me-2"></i>
                 SpeedHiveHome
             </a>
             <div class="navbar-text">
-                <span id="version-info" class="text-light me-3"></span>
-                <span id="current-time" class="text-light"></span>
+                <span id="version-info" class="me-3" style="color: #6c757d;"></span>
+                <span id="current-time" style="color: #6c757d;"></span>
             </div>
         </div>
     </nav>
