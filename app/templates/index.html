@@ -432,7 +432,12 @@
         
         .controller-settings .text-muted {
             font-size: 0.7rem; /* 缩小提示文字 */
-            margin-top: 0.1rem !important;
+            white-space: nowrap; /* 防止文字换行 */
+        }
+        
+        /* 正常下载和上传字段的输入框调整 */
+        #normal-download, #normal-upload {
+            flex: 1; /* 让输入框占据剩余空间 */
         }
         
         /* 为固定卡片调整页面内容的上边距 */
@@ -670,13 +675,17 @@
                         </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <label class="form-label small">正常下载 (KB/s)</label>
-                                <input type="number" class="form-control form-control-sm" id="normal-download" value="0" min="0">
-                                <small class="text-muted">0 = 不限速</small>
+                                <div class="d-flex align-items-center">
+                                    <input type="number" class="form-control form-control-sm" id="normal-download" value="0" min="0">
+                                    <small class="text-muted ms-2">0 = 不限速</small>
+                                </div>
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <label class="form-label small">正常上传 (KB/s)</label>
-                                <input type="number" class="form-control form-control-sm" id="normal-upload" value="0" min="0">
-                                <small class="text-muted">0 = 不限速</small>
+                                <div class="d-flex align-items-center">
+                                    <input type="number" class="form-control form-control-sm" id="normal-upload" value="0" min="0">
+                                    <small class="text-muted ms-2">0 = 不限速</small>
+                                </div>
                             </div>
                         </div>
                     </div>
