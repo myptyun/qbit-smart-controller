@@ -686,7 +686,7 @@
                                 allDevices.push({
                                     type: 'lucky',
                                     device_name: device.device_name,
-                                    service_name: service.remark || '未命名服务',
+                                    service_name: service.remark || '未命名服务', // 使用Remark字段作为设备名称
                                     service_type: service.service_type,
                                     enabled: service.enabled,
                                     connections: device.connections,
@@ -746,7 +746,6 @@
                             <thead>
                                 <tr>
                                     <th>设备名称</th>
-                                    <th>操作</th>
                                     <th>状态控制</th>
                                     <th>连接数</th>
                                     <th>下载数据</th>
@@ -785,21 +784,8 @@
                                 <br><small class="text-muted">${device.device_name}</small>
                             </td>
                             <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-primary btn-sm" title="编辑">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" title="删除">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                            <td>
                                 <div class="status-toggle">
-                                    <button class="btn btn-secondary btn-sm" title="删除">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                    <div class="toggle-switch ${device.enabled ? 'active' : ''}" title="开关">
+                                    <div class="toggle-switch ${device.enabled ? 'active' : ''}" onclick="toggleDeviceControl(${index})" title="控制该设备是否参与qB限速逻辑">
                                     </div>
                                     <span class="small">${device.enabled ? '开' : '关'}</span>
                                     <button class="btn btn-warning btn-sm" title="日志">
@@ -1490,6 +1476,22 @@
                 console.error('获取设备详情失败:', error);
                 alert('获取设备详情失败: ' + error.message);
             }
+        }
+
+        function toggleDeviceControl(index) {
+            // 这里应该控制该设备是否参与qB限速逻辑
+            // 可以通过API调用来更新设备的控制状态
+            window.dashboard.addLog(`设备控制状态已切换 (索引: ${index})`, 'info');
+            
+            // 更新开关状态
+            const toggleSwitch = event.target;
+            toggleSwitch.classList.toggle('active');
+            const statusText = toggleSwitch.nextElementSibling;
+            const isActive = toggleSwitch.classList.contains('active');
+            statusText.textContent = isActive ? '开' : '关';
+            
+            // 这里可以添加API调用来保存控制状态
+            // 例如: await fetch('/api/device/control', { method: 'POST', body: JSON.stringify({index, enabled: isActive}) });
         }
 
         function toggleDeviceStatus(index) {
