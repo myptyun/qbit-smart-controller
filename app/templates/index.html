@@ -375,14 +375,14 @@
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">
                             <i class="fas fa-table me-2"></i>
-                            设备状态总览
+                            qBittorrent实例状态总览
                         </h6>
                         <div>
                             <button class="btn btn-sm btn-outline-light me-2" onclick="refreshAllStatus()">
                                 <i class="fas fa-sync-alt"></i> 刷新
                             </button>
                             <button class="btn btn-sm btn-outline-light" onclick="showLuckyDeviceModal()">
-                                <i class="fas fa-plus"></i> 添加设备
+                                <i class="fas fa-plus"></i> 添加Lucky设备
                             </button>
                         </div>
                     </div>
@@ -392,7 +392,7 @@
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">加载中...</span>
                                 </div>
-                                <p class="mt-2 text-muted">正在加载设备数据...</p>
+                                <p class="mt-2 text-muted">正在加载qBittorrent实例数据...</p>
                             </div>
                         </div>
                     </div>
@@ -749,7 +749,7 @@
                 const container = document.getElementById('devices-table-content');
                 let allDevices = [];
                 
-                // 处理Lucky设备
+                // 处理Lucky设备（如果有配置的话）
                 if (luckyStatus.devices && luckyStatus.devices.length > 0) {
                     luckyStatus.devices.forEach(device => {
                         if (device.success && device.services) {
@@ -776,7 +776,7 @@
                     });
                 }
                 
-                // 处理qBittorrent实例 - 使用Remark字段作为设备名称
+                // 处理qBittorrent实例（主要显示内容）- 使用Remark字段作为设备名称
                 if (qbitStatus.instances && qbitStatus.instances.length > 0) {
                     qbitStatus.instances.forEach(instance => {
                         if (instance.success) {
@@ -809,7 +809,7 @@
                     container.innerHTML = `
                         <div class="text-center py-4 text-muted">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                            <p>暂无设备数据</p>
+                            <p>暂无qBittorrent实例数据</p>
                         </div>
                     `;
                     return;
@@ -880,7 +880,7 @@
                             </span>
                         `;
                     } else {
-                        // Lucky设备显示在线状态
+                        // Lucky设备显示在线状态（如果存在的话）
                         connectionStatusHtml = `
                             <span class="status-badge ${device.enabled ? 'status-online' : 'status-offline'}">
                                 <i class="fas fa-${device.enabled ? 'check-circle' : 'times-circle'}"></i>
@@ -948,7 +948,7 @@
             }
 
             renderLuckyStatus(status) {
-                // 这个方法现在被renderDevicesTable替代，但保留用于兼容性
+                // 这个方法现在被renderDevicesTable替代，主要用于显示qBittorrent实例状态
                 this.renderDevicesTable(status, { instances: [] });
             }
 
