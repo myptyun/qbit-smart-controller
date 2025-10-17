@@ -298,8 +298,10 @@
         #overview-cards {
             position: fixed;
             top: 0; /* 显示到浏览器最顶部 */
-            left: 0;
-            right: 0;
+            left: 50%; /* 居中定位 */
+            transform: translateX(-50%); /* 居中显示 */
+            width: 1200px; /* 固定宽度与内容区域一致 */
+            max-width: 100%; /* 在小屏幕上自适应 */
             z-index: 1000;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -313,7 +315,7 @@
         #overview-cards .container {
             max-width: 1200px; /* 与Bootstrap container同宽，与下面表格内容区域对齐 */
             margin: 0 auto; /* 居中显示 */
-            padding: 0 15px;
+            padding: 0 -15px;
         }
         
         /* 让4个卡片平均分配宽度 */
