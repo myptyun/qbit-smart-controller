@@ -14,10 +14,10 @@ services:
     
     # 卷映射 - 数据持久化配置
     volumes:
-      # 配置文件映射（只读）
-      - ./config:/app/config:ro
+      # 配置文件映射（读写，以便在Web界面保存配置）
+      - /home/myptyun/config:/app/config
       # 数据目录映射（日志、缓存等）
-      - ./data:/app/data
+      - /home/myptyun/data:/app/data
       # 可选：应用代码映射（开发时使用）
       # - ./app:/app/app:ro
     
