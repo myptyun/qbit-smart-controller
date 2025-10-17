@@ -923,7 +923,8 @@
                                 console.log(`Found ${proxyList.length} services in ruleList`);
                                 
                                 proxyList.forEach((proxy, index) => {
-                                    console.log(`Processing proxy ${index}:`, proxy);
+                                    console.log(`=== Processing proxy ${index} ===`);
+                                    console.log('Full proxy object:', JSON.stringify(proxy, null, 2));
                                     console.log('Service Enable:', proxy.Enable);
                                     console.log('Service DisplayInFrontendList:', proxy.DisplayInFrontendList);
                                     console.log('Service Remark:', proxy.Remark);
@@ -932,6 +933,9 @@
                                     console.log('Service Locations:', proxy.Locations);
                                     console.log('Service Domains:', proxy.Domains);
                                     
+                                    // 尝试不同的字段名
+                                    console.log('All proxy keys:', Object.keys(proxy));
+                                    
                                     // 显示所有启用的服务（不限制DisplayInFrontendList）
                                     if (proxy.Enable) {
                                         enabledServices++;
@@ -939,14 +943,38 @@
                                         const proxyKey = proxy.Key;
                                         const stats = statistics[proxyKey] || {};
                                         
+                                        // 尝试不同的字段名获取服务名称
+                                        const serviceName = proxy.Remark || 
+                                                           proxy.RuleName || 
+                                                           proxy.Name || 
+                                                           proxy.ServiceName ||
+                                                           proxy.Key ||
+                                                           '未命名服务';
+                                        
+                                        // 尝试不同的字段名获取地址和域名
+                                        const locations = proxy.Locations || 
+                                                        proxy.Targets || 
+                                                        proxy.Target || 
+                                                        proxy.Upstreams ||
+                                                        [];
+                                        
+                                        const domains = proxy.Domains || 
+                                                      proxy.Domain || 
+                                                      proxy.Hosts ||
+                                                      [];
+                                        
+                                        console.log(`Service name resolved: ${serviceName}`);
+                                        console.log(`Locations resolved:`, locations);
+                                        console.log(`Domains resolved:`, domains);
+                                        
                                         proxyServices.push({
                                             device_name: device.device_name,
-                                            service_name: proxy.Remark || '未命名服务',
+                                            service_name: serviceName,
                                             service_type: proxy.WebServiceType || 'unknown',
                                             enabled: proxy.Enable,
                                             key: proxy.Key,
-                                            locations: proxy.Locations || [],
-                                            domains: proxy.Domains || [],
+                                            locations: locations,
+                                            domains: domains,
                                             // 从statistics获取连接数和速度
                                             connections: stats.Connections || stats.connections || 0,
                                             download_speed: stats.DownloadSpeed || stats.downloadSpeed || 0,
