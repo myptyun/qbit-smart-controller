@@ -406,7 +406,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- qB客户端实体总览 -->
             <div class="col-lg-6 mb-4">
                 <div class="card status-card">
@@ -450,7 +450,7 @@
                             </button>
                         <button class="btn btn-outline-primary ms-2" onclick="showLuckyDevicesList()">
                             <i class="fas fa-list me-2"></i>查看所有
-                            </button>
+                        </button>
                     </div>
                                 </div>
                             </div>
@@ -785,7 +785,7 @@
                         <div class="text-center py-4 text-muted">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
                             <p>暂无qBittorrent实例数据</p>
-                        </div>
+                                    </div>
                     `;
                     return;
                 }
@@ -854,7 +854,7 @@
                                     <span class="status-badge ${statusClass}">
                                         <i class="${statusIcon}"></i>
                                         ${statusText}
-                                    </span>
+                                                </span>
                                 </td>
                                 <td>
                                     <span class="data-badge">
@@ -891,7 +891,7 @@
                     </div>
                 `;
                 
-                container.innerHTML = html;
+                    container.innerHTML = html;
             }
 
             renderLuckyTable(luckyStatus) {
@@ -941,7 +941,7 @@
                                         
                                         // 显示所有启用的服务
                                         if (proxy.Enable) {
-                                        enabledServices++;
+                                            enabledServices++;
                                         // 从statistics中获取该服务的连接和速度信息
                                         const proxyKey = proxy.Key;
                                         const ruleStats = statistics[ruleKey] || {};
@@ -990,8 +990,9 @@
                                             upload_bytes: stats.TrafficOut || 0,
                                             last_update: device.last_update
                                         });
-                                    }
-                                });
+                                        }
+                                    });
+                                }
                             }
                         }
                     });
