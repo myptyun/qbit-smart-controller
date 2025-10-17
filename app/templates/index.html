@@ -315,7 +315,7 @@
         #overview-cards .container {
             max-width: none; /* 移除宽度限制，让容器占满背景宽度 */
             margin: 0; /* 移除居中，靠齐两边 */
-            padding: 0 15px; /* 恢复正常的左右内边距 */
+            padding: 0; /* 移除内边距，让卡片直接靠齐背景边缘 */
         }
         
         /* 让4个卡片平均分配宽度 */
@@ -343,7 +343,22 @@
         #overview-cards .col-2 {
             flex: 0 0 20% !important;
             max-width: 20% !important;
-            padding: 0 4px; /* 减少间距，让卡片更宽 */
+        }
+        
+        /* 第一个和最后一个卡片靠齐边缘 */
+        #overview-cards .col-2:first-child {
+            padding-left: 0;
+            padding-right: 4px;
+        }
+        
+        #overview-cards .col-2:last-child {
+            padding-left: 4px;
+            padding-right: 0;
+        }
+        
+        /* 中间卡片距离均分 */
+        #overview-cards .col-2:not(:first-child):not(:last-child) {
+            padding: 0 4px;
         }
         
         /* Logo卡片特殊样式 */
