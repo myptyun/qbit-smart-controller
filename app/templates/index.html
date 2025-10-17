@@ -417,8 +417,8 @@
         
         .controller-settings .col-lg-2 {
             margin-bottom: 0.5rem; /* 减少列间距 */
-            flex: 0 0 12.5% !important; /* 8个字段平均分配，每个占12.5% */
-            max-width: 12.5% !important;
+            flex: 0 0 14.28% !important; /* 7个字段平均分配，每个占14.28% */
+            max-width: 14.28% !important;
         }
         
         .controller-settings .form-label {
@@ -637,11 +637,14 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card status-card">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">
                             <i class="fas fa-cogs me-2"></i>
                             控制器设置
                         </h6>
+                        <button class="btn btn-light btn-sm" onclick="saveControllerSettings()">
+                            <i class="fas fa-save me-1"></i>保存设置
+                        </button>
                     </div>
                     <div class="card-body controller-settings">
                         <div class="row g-3">
@@ -674,11 +677,6 @@
                                 <label class="form-label small">正常上传 (KB/s)</label>
                                 <input type="number" class="form-control form-control-sm" id="normal-upload" value="0" min="0">
                                 <small class="text-muted">0 = 不限速</small>
-                            </div>
-                            <div class="col-lg-2 col-md-4 col-sm-6 d-flex align-items-end">
-                                <button class="btn btn-primary btn-sm w-100" onclick="saveControllerSettings()">
-                                    <i class="fas fa-save me-1"></i>保存设置
-                                </button>
                             </div>
                         </div>
                     </div>
