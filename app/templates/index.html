@@ -765,10 +765,14 @@
                     this.updateOverview(luckyStatus, qbitStatus, controllerState);
                     this.lastUpdate = new Date();
                     
-                    document.getElementById('last-update-time').textContent = 
-                        this.lastUpdate.toLocaleTimeString('zh-CN');
-                    document.getElementById('last-collection-time').textContent = 
-                        this.lastUpdate.toLocaleTimeString('zh-CN');
+                    const lastUpdateElement = document.getElementById('last-update-time');
+                    if (lastUpdateElement) {
+                        lastUpdateElement.textContent = this.lastUpdate.toLocaleTimeString('zh-CN');
+                    }
+                    const lastCollectionElement = document.getElementById('last-collection-time');
+                    if (lastCollectionElement) {
+                        lastCollectionElement.textContent = this.lastUpdate.toLocaleTimeString('zh-CN');
+                    }
                         
                     this.addLog('状态数据采集完成', 'success');
                 } catch (error) {
@@ -1283,22 +1287,34 @@
                 const luckyDevices = luckyStatus.devices || [];
                 const activeLuckyDevices = luckyDevices.filter(d => d.success && d.status === 'online').length;
                 
-                document.getElementById('lucky-devices-count').textContent = luckyDevices.length;
-                document.getElementById('lucky-active-count').textContent = `${activeLuckyDevices} 个活跃`;
+                const luckyDevicesCountElement = document.getElementById('lucky-devices-count');
+                if (luckyDevicesCountElement) {
+                    luckyDevicesCountElement.textContent = luckyDevices.length;
+                }
+                const luckyActiveCountElement = document.getElementById('lucky-active-count');
+                if (luckyActiveCountElement) {
+                    luckyActiveCountElement.textContent = `${activeLuckyDevices} 个活跃`;
+                }
 
                 // QB 实例统计
                 const qbitInstances = qbitStatus.instances || [];
                 const activeQbitInstances = qbitInstances.filter(i => i.success && i.status === 'online').length;
                 
-                document.getElementById('qbit-instances-count').textContent = qbitInstances.length;
-                document.getElementById('qbit-active-count').textContent = `${activeQbitInstances} 个在线`;
+                const qbitInstancesCountElement = document.getElementById('qbit-instances-count');
+                if (qbitInstancesCountElement) {
+                    qbitInstancesCountElement.textContent = qbitInstances.length;
+                }
+                const qbitActiveCountElement = document.getElementById('qbit-active-count');
+                if (qbitActiveCountElement) {
+                    qbitActiveCountElement.textContent = `${activeQbitInstances} 个在线`;
+                }
 
                 // 控制器状态（使用真实的控制器数据）
                 const statusElement = document.getElementById('connection-status');
                 const statusCard = document.getElementById('limit-status-card');
                 const activeConnElement = document.getElementById('active-connections');
                 
-                if (controllerState) {
+                if (controllerState && statusElement && statusCard && activeConnElement) {
                     const isLimited = controllerState.is_limited;
                     const totalConnections = controllerState.total_connections || 0;
                     const limitTimer = controllerState.limit_timer || 0;
@@ -1320,9 +1336,11 @@
                             activeConnElement.textContent = '无活跃连接';
                         }
                     }
-                    
-                    // 更新服务状态
-                    const serviceStatus = document.getElementById('service-status');
+                }
+                
+                // 更新服务状态（如果元素存在）
+                const serviceStatus = document.getElementById('service-status');
+                if (serviceStatus && controllerState) {
                     if (controllerState.running) {
                         serviceStatus.className = 'badge bg-success';
                         serviceStatus.textContent = '运行中';
