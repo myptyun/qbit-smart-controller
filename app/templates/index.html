@@ -327,6 +327,14 @@
         
         #overview-cards .overview-card {
             width: 100%; /* 确保卡片占满分配的列宽 */
+            max-width: 100%; /* 防止任何卡片超出分配宽度 */
+            flex: 1; /* 确保所有卡片平均分配空间 */
+        }
+        
+        /* 确保所有卡片类型都有相同的宽度约束 */
+        #overview-cards .system-status-card {
+            width: 100% !important;
+            max-width: 100% !important;
         }
         
         /* 为固定卡片调整页面内容的上边距 */
