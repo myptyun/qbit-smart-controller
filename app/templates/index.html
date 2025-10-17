@@ -410,6 +410,29 @@
             max-width: 120px;
         }
         
+        /* 控制器设置区域紧凑布局 */
+        .controller-settings .row.g-3 {
+            margin-bottom: 0.5rem !important; /* 减少行间距 */
+        }
+        
+        .controller-settings .col-lg-2 {
+            margin-bottom: 0.5rem; /* 减少列间距 */
+        }
+        
+        .controller-settings .form-label {
+            margin-bottom: 0.25rem !important; /* 减少标签与输入框间距 */
+            font-size: 0.8rem; /* 稍微缩小标签字体 */
+        }
+        
+        .controller-settings .form-control {
+            margin-bottom: 0.25rem !important; /* 减少输入框间距 */
+        }
+        
+        .controller-settings .text-muted {
+            font-size: 0.7rem; /* 缩小提示文字 */
+            margin-top: 0.1rem !important;
+        }
+        
         /* 为固定卡片调整页面内容的上边距 */
         .container {
             margin-top: 120px; /* 增加10px上边距，避免被悬浮卡片盖住 */
@@ -449,19 +472,19 @@
                         <div class="logo-content">
                             <div class="logo-icon">
                                 <i class="fas fa-home text-primary"></i>
-                            </div>
+            </div>
                             <div class="logo-text">
                                 <div class="logo-title">SpeedHive</div>
                                 <div class="logo-subtitle">智能控制</div>
-                            </div>
-                        </div>
+        </div>
                     </div>
-                </div>
+                            </div>
+                            </div>
                 <div class="col-2">
                     <div class="overview-card">
                         <div class="card-icon">
                             <i class="fas fa-satellite-dish text-primary"></i>
-                        </div>
+                            </div>
                         <div class="card-number text-primary" id="lucky-devices-count">0</div>
                         <div class="card-text">
                             <div class="card-label">Lucky 设备</div>
@@ -473,41 +496,41 @@
                     <div class="overview-card">
                         <div class="card-icon">
                             <i class="fas fa-server text-success"></i>
-                        </div>
+            </div>
                         <div class="card-number text-success" id="qbit-instances-count">0</div>
                         <div class="card-text">
                             <div class="card-label">QB 实例</div>
                             <div class="card-subtitle" id="qbit-active-count">0 个在线</div>
-                        </div>
+        </div>
                     </div>
                 </div>
                 <div class="col-2">
                     <div class="overview-card system-status-card" id="limit-status-card">
                         <div class="card-icon">
                             <i class="fas fa-shield-alt"></i>
-                        </div>
+            </div>
                         <div class="card-number" id="connection-status">正常</div>
                         <div class="card-text">
                             <div class="card-label">限速状态</div>
                             <div class="card-subtitle" id="active-connections">无活跃连接</div>
-                        </div>
                     </div>
                 </div>
+            </div>
                 <div class="col-2">
                     <div class="overview-card">
                         <div class="card-icon">
                             <i class="fas fa-clock text-warning"></i>
-                        </div>
+                    </div>
                         <div class="card-number text-warning" id="next-check">2s</div>
                         <div class="card-text">
                             <div class="card-label">下次检查</div>
                             <div class="card-subtitle" id="last-collection-time">-</div>
-                        </div>
+                </div>
+            </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
     <div class="container">
         <!-- 设备状态表格展示区域 -->
@@ -618,7 +641,7 @@
                             控制器设置
                         </h6>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body controller-settings">
                         <div class="row g-3">
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <label class="form-label small">轮询间隔 (秒)</label>
@@ -645,8 +668,6 @@
                                 <input type="number" class="form-control form-control-sm" id="normal-download" value="0" min="0">
                                 <small class="text-muted">0 = 不限速</small>
                             </div>
-                        </div>
-                        <div class="row g-3 mt-2">
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <label class="form-label small">正常上传 (KB/s)</label>
                                 <input type="number" class="form-control form-control-sm" id="normal-upload" value="0" min="0">
