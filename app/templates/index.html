@@ -297,62 +297,31 @@
             </div>
         </div>
 
-        <!-- 设备状态展示区域 -->
+        <!-- 设备状态表格展示区域 -->
         <div class="row">
-            <!-- Lucky 设备状态 -->
-            <div class="col-lg-6 mb-4">
+            <div class="col-12 mb-4">
                 <div class="card status-card">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">
-                            <i class="fas fa-satellite-dish me-2"></i>
-                            Lucky 设备状态
+                            <i class="fas fa-table me-2"></i>
+                            设备状态总览
                         </h6>
                         <div>
-                            <button class="btn btn-sm btn-outline-light me-2" onclick="refreshLuckyStatus()">
-                                <i class="fas fa-sync-alt"></i>
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="refreshAllStatus()">
+                                <i class="fas fa-sync-alt"></i> 刷新
                             </button>
-                            <button class="btn btn-sm btn-outline-light" onclick="window.location.href='#lucky-management'">
-                                <i class="fas fa-cog"></i> 管理
+                            <button class="btn btn-sm btn-outline-light" onclick="showLuckyDeviceModal()">
+                                <i class="fas fa-plus"></i> 添加设备
                             </button>
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <div id="lucky-status-content">
+                        <div id="devices-table-content">
                             <div class="text-center py-4">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">加载中...</span>
                                 </div>
-                                <p class="mt-2 text-muted">正在连接 Lucky 设备...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- qBittorrent 状态 -->
-            <div class="col-lg-6 mb-4">
-                <div class="card status-card">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">
-                            <i class="fas fa-server me-2"></i>
-                            qBittorrent 状态
-                        </h6>
-                        <div>
-                            <button class="btn btn-sm btn-outline-light me-2" onclick="refreshQbitStatus()">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-light" onclick="window.location.href='#qbit-management'">
-                                <i class="fas fa-cog"></i> 管理
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div id="qbit-status-content">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-success" role="status">
-                                    <span class="visually-hidden">加载中...</span>
-                                </div>
-                                <p class="mt-2 text-muted">正在连接 qBittorrent...</p>
+                                <p class="mt-2 text-muted">正在加载设备数据...</p>
                             </div>
                         </div>
                     </div>
@@ -689,8 +658,7 @@
                         fetch('/api/controller/state').then(r => r.json())
                     ]);
 
-                    this.renderLuckyStatus(luckyStatus);
-                    this.renderQbitStatus(qbitStatus);
+                    this.renderDevicesTable(luckyStatus, qbitStatus);
                     this.updateOverview(luckyStatus, qbitStatus, controllerState);
                     this.lastUpdate = new Date();
                     
@@ -706,60 +674,185 @@
                 }
             }
 
-            renderLuckyStatus(status) {
-                const container = document.getElementById('lucky-status-content');
-                if (status.devices && status.devices.length > 0) {
-                    let html = '';
-                    status.devices.forEach((device, index) => {
-                        const statusClass = this.getLuckyStatusClass(device);
-                        const statusText = this.getLuckyStatusText(device);
-                        const statusBadge = this.getLuckyStatusBadge(device);
-                        
-                        html += `
-                            <div class="device-card ${statusClass}">
-                                <div class="device-header">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0">${device.device_name}</h6>
-                                        <span class="badge ${statusBadge}">${statusText}</span>
-                                    </div>
-                                </div>
-                                <div class="device-body">
-                                    ${device.success ? `
-                                        <div class="row text-center">
-                                            <div class="col-6 border-end">
-                                                <small class="text-muted d-block">连接数</small>
-                                                <span class="fw-bold fs-5 ${device.connections > 0 ? 'text-danger' : 'text-success'}">
-                                                    ${device.connections}
-                                                </span>
-                                            </div>
-                                            <div class="col-6">
-                                                <small class="text-muted d-block">加权连接</small>
-                                                <span class="fw-bold fs-5">${device.weighted_connections.toFixed(1)}</span>
-                                            </div>
-                                        </div>
-                                        <div class="mt-2">
-                                            <small class="text-muted api-status">
-                                                最后更新: ${new Date(device.last_update).toLocaleTimeString('zh-CN')}
-                                            </small>
-                                        </div>
-                                    ` : `
-                                        <div class="alert alert-warning py-2 mb-0">
-                                            <small><i class="fas fa-exclamation-triangle me-1"></i> ${device.error || '连接失败'}</small>
-                                        </div>
-                                    `}
-                                </div>
-                            </div>
-                        `;
+            renderDevicesTable(luckyStatus, qbitStatus) {
+                const container = document.getElementById('devices-table-content');
+                let allDevices = [];
+                
+                // 处理Lucky设备
+                if (luckyStatus.devices && luckyStatus.devices.length > 0) {
+                    luckyStatus.devices.forEach(device => {
+                        if (device.success && device.services) {
+                            device.services.forEach(service => {
+                                allDevices.push({
+                                    type: 'lucky',
+                                    device_name: device.device_name,
+                                    service_name: service.remark || '未命名服务',
+                                    service_type: service.service_type,
+                                    enabled: service.enabled,
+                                    connections: device.connections,
+                                    download_bytes: device.download_bytes || 0,
+                                    upload_bytes: device.upload_bytes || 0,
+                                    domains: service.domains,
+                                    locations: service.locations,
+                                    last_error: service.last_error,
+                                    cache_enabled: service.cache_enabled,
+                                    cache_size: service.cache_size,
+                                    cache_files: service.cache_files,
+                                    last_update: device.last_update
+                                });
+                            });
+                        }
                     });
-                    container.innerHTML = html;
-                } else {
+                }
+                
+                // 处理qBittorrent实例
+                if (qbitStatus.instances && qbitStatus.instances.length > 0) {
+                    qbitStatus.instances.forEach(instance => {
+                        if (instance.success) {
+                            allDevices.push({
+                                type: 'qbit',
+                                device_name: instance.instance_name,
+                                service_name: 'qBittorrent',
+                                service_type: 'qbittorrent',
+                                enabled: instance.status === 'online',
+                                connections: 0,
+                                download_bytes: instance.download_speed || 0,
+                                upload_bytes: instance.upload_speed || 0,
+                                domains: [],
+                                locations: [instance.host],
+                                last_error: instance.error || '',
+                                cache_enabled: false,
+                                cache_size: 0,
+                                cache_files: 0,
+                                last_update: instance.last_update
+                            });
+                        }
+                    });
+                }
+                
+                if (allDevices.length === 0) {
                     container.innerHTML = `
                         <div class="text-center py-4 text-muted">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                            <p>未配置 Lucky 设备</p>
+                            <p>暂无设备数据</p>
                         </div>
                     `;
+                    return;
                 }
+                
+                let html = `
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>设备名称</th>
+                                    <th>操作</th>
+                                    <th>状态控制</th>
+                                    <th>连接数</th>
+                                    <th>下载数据</th>
+                                    <th>上传数据</th>
+                                    <th>外部URL</th>
+                                    <th>内部地址</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                allDevices.forEach((device, index) => {
+                    // 格式化数据大小
+                    const formatBytes = (bytes) => {
+                        if (bytes === 0) return '0 B';
+                        const k = 1024;
+                        const sizes = ['B', 'KB', 'MB', 'GB'];
+                        const i = Math.floor(Math.log(bytes) / Math.log(k));
+                        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                    };
+                    
+                    // 获取外部URL
+                    const externalUrl = device.domains && device.domains.length > 0 
+                        ? `https://${device.domains[0]}` 
+                        : `https://${device.device_name.toLowerCase()}.hsdzdh.com`;
+                    
+                    // 获取内部地址
+                    const internalAddress = device.locations && device.locations.length > 0 
+                        ? device.locations[0] 
+                        : '未知';
+                    
+                    html += `
+                        <tr>
+                            <td>
+                                <span class="device-name-badge">${device.service_name}</span>
+                                <br><small class="text-muted">${device.device_name}</small>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-primary btn-sm" title="编辑">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" title="删除">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="status-toggle">
+                                    <button class="btn btn-secondary btn-sm" title="删除">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <div class="toggle-switch ${device.enabled ? 'active' : ''}" title="开关">
+                                    </div>
+                                    <span class="small">${device.enabled ? '开' : '关'}</span>
+                                    <button class="btn btn-warning btn-sm" title="日志">
+                                        <i class="fas fa-eye"></i> 日志
+                                    </button>
+                                    <button class="btn btn-success btn-sm" title="反向代理">
+                                        反向代理
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="data-badge">
+                                    <i class="fas fa-link"></i>
+                                    ${device.connections}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="data-badge">
+                                    <i class="fas fa-arrow-down"></i>
+                                    ${formatBytes(device.download_bytes)}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="data-badge">
+                                    <i class="fas fa-arrow-up"></i>
+                                    ${formatBytes(device.upload_bytes)}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="${externalUrl}" target="_blank" class="url-badge">
+                                    ${externalUrl}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="arrow-separator">→</span>
+                                <span class="ip-badge">${internalAddress}</span>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+            }
+
+            renderLuckyStatus(status) {
+                // 这个方法现在被renderDevicesTable替代，但保留用于兼容性
+                this.renderDevicesTable(status, { instances: [] });
             }
 
             getLuckyStatusClass(device) {
@@ -1017,9 +1110,9 @@
         }
 
         // 全局函数
-        async function refreshLuckyStatus() {
-            window.dashboard.addLog('手动刷新Lucky状态...', 'info');
-            const container = document.getElementById('lucky-status-content');
+        async function refreshAllStatus() {
+            window.dashboard.addLog('手动刷新所有状态...', 'info');
+            const container = document.getElementById('devices-table-content');
             container.innerHTML = `
                 <div class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
@@ -1028,6 +1121,11 @@
                     <p class="mt-2 text-muted">刷新中...</p>
                 </div>
             `;
+            await window.dashboard.updateStatus();
+        }
+
+        async function refreshLuckyStatus() {
+            window.dashboard.addLog('手动刷新Lucky状态...', 'info');
             await window.dashboard.updateStatus();
         }
 

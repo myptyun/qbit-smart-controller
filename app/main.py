@@ -266,8 +266,9 @@ class LuckyMonitor:
                         
                         print(f"📊 {device_config['name']} - 连接数: {connections}, 加权: {weighted_connections}")
                         
-                        # 解析详细的连接信息
+                        # 解析详细的连接信息和服务信息
                         detailed_connections = self._parse_detailed_connections(data)
+                        services_info = self._parse_lucky_services(data)
                         total_download_bytes = sum(conn.get("download_bytes", 0) for conn in detailed_connections)
                         total_upload_bytes = sum(conn.get("upload_bytes", 0) for conn in detailed_connections)
                         
@@ -283,6 +284,7 @@ class LuckyMonitor:
                             "download_bytes": total_download_bytes,
                             "upload_bytes": total_upload_bytes,
                             "detailed_connections": detailed_connections,
+                            "services": services_info,
                             "attempt": attempt + 1
                         }
                     else:
@@ -465,6 +467,49 @@ class LuckyMonitor:
             
         except Exception as e:
             print(f"❌ 详细连接解析错误: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    def _parse_lucky_services(self, data: dict) -> list:
+        """解析Lucky API响应，提取服务信息"""
+        try:
+            print("🔍 开始解析Lucky服务数据...")
+            services_info = []
+            
+            # 从ruleList中提取服务信息
+            if "ruleList" in data and isinstance(data["ruleList"], list):
+                for rule in data["ruleList"]:
+                    service_info = {
+                        "key": rule.get("Key", ""),
+                        "service_type": rule.get("WebServiceType", "unknown"),
+                        "enabled": rule.get("Enable", False),
+                        "locations": rule.get("Locations", []),
+                        "domains": rule.get("Domains", []),
+                        "remark": rule.get("Remark", ""),
+                        "last_error": rule.get("LastErrMsg", ""),
+                        "cache_enabled": rule.get("CacheEnabled", False),
+                        "cache_size": rule.get("CaCheTotalSize", 0),
+                        "cache_files": rule.get("CacheFilesTotal", 0),
+                        "display_in_frontend": rule.get("DisplayInFrontendList", True),
+                        "coraza_waf": rule.get("CorazaWAF", False),
+                        "safe_ip_mode": rule.get("SafeIPMode", ""),
+                        "safe_user_agent_mode": rule.get("SafeUserAgentMode", ""),
+                        "basic_auth_enabled": rule.get("EnableBasicAuth", False),
+                        "basic_auth_users": rule.get("BasicAuthUserList", ""),
+                        "custom_output": rule.get("CustomOutputText", "")
+                    }
+                    
+                    # 只显示启用的服务
+                    if service_info["enabled"] and service_info["display_in_frontend"]:
+                        services_info.append(service_info)
+                        print(f"  📡 服务 {service_info['remark']}: {service_info['service_type']}")
+            
+            print(f"📊 解析到 {len(services_info)} 个服务信息")
+            return services_info
+            
+        except Exception as e:
+            print(f"❌ 解析服务信息失败: {e}")
             import traceback
             traceback.print_exc()
             return []
