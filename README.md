@@ -70,6 +70,8 @@
 - **`init_config.sh`** - 初始化配置文件和目录
 - **`diagnose.sh`** - 诊断容器和配置问题
 - **`fix_config.sh`** - 快速修复配置问题
+- **`test_qb_connection.sh`** - 测试 qBittorrent 连接和认证
+- **`redeploy.sh`** - 快速重新部署（修复代码bug）
 
 ## 🚀 快速开始
 
