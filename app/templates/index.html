@@ -297,7 +297,7 @@
         /* 固定悬浮卡片样式 */
         #overview-cards {
             position: fixed;
-            top: 60px; /* 导航栏高度 */
+            top: 0; /* 显示到浏览器最顶部 */
             left: 0;
             right: 0;
             z-index: 1000;
@@ -309,9 +309,16 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
         
+        /* 让悬浮卡片内容与下面表格同宽 */
+        #overview-cards .container {
+            max-width: 1200px; /* 与Bootstrap container同宽 */
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
         /* 为固定卡片调整页面内容的上边距 */
         .container {
-            margin-top: 200px; /* 为固定卡片留出空间 */
+            margin-top: 250px; /* 为固定卡片和导航栏留出空间 */
         }
         
         /* 响应式调整 */
@@ -328,11 +335,11 @@
             
             /* 移动端调整固定卡片 */
             #overview-cards {
-                top: 50px;
+                top: 0;
                 padding: 0.5rem 0;
             }
             .container {
-                margin-top: 180px;
+                margin-top: 220px;
             }
         }
     </style>
