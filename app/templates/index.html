@@ -705,14 +705,14 @@
                     });
                 }
                 
-                // 处理qBittorrent实例
+                // 处理qBittorrent实例 - 使用Remark字段作为设备名称
                 if (qbitStatus.instances && qbitStatus.instances.length > 0) {
                     qbitStatus.instances.forEach(instance => {
                         if (instance.success) {
                             allDevices.push({
                                 type: 'qbit',
                                 device_name: instance.instance_name,
-                                service_name: 'qBittorrent',
+                                service_name: instance.remark || instance.instance_name, // 使用Remark字段，如果没有则使用实例名称
                                 service_type: 'qbittorrent',
                                 enabled: instance.status === 'online',
                                 connections: 0,
@@ -750,8 +750,6 @@
                                     <th>连接数</th>
                                     <th>下载数据</th>
                                     <th>上传数据</th>
-                                    <th>外部URL</th>
-                                    <th>内部地址</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -767,33 +765,16 @@
                         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
                     };
                     
-                    // 获取外部URL
-                    const externalUrl = device.domains && device.domains.length > 0 
-                        ? `https://${device.domains[0]}` 
-                        : `https://${device.device_name.toLowerCase()}.hsdzdh.com`;
-                    
-                    // 获取内部地址
-                    const internalAddress = device.locations && device.locations.length > 0 
-                        ? device.locations[0] 
-                        : '未知';
-                    
                     html += `
                         <tr>
                             <td>
                                 <span class="device-name-badge">${device.service_name}</span>
-                                <br><small class="text-muted">${device.device_name}</small>
                             </td>
                             <td>
                                 <div class="status-toggle">
                                     <div class="toggle-switch ${device.enabled ? 'active' : ''}" onclick="toggleDeviceControl(${index})" title="控制该设备是否参与qB限速逻辑">
                                     </div>
                                     <span class="small">${device.enabled ? '开' : '关'}</span>
-                                    <button class="btn btn-warning btn-sm" title="日志">
-                                        <i class="fas fa-eye"></i> 日志
-                                    </button>
-                                    <button class="btn btn-success btn-sm" title="反向代理">
-                                        反向代理
-                                    </button>
                                 </div>
                             </td>
                             <td>
@@ -813,15 +794,6 @@
                                     <i class="fas fa-arrow-up"></i>
                                     ${formatBytes(device.upload_bytes)}
                                 </span>
-                            </td>
-                            <td>
-                                <a href="${externalUrl}" target="_blank" class="url-badge">
-                                    ${externalUrl}
-                                </a>
-                            </td>
-                            <td>
-                                <span class="arrow-separator">→</span>
-                                <span class="ip-badge">${internalAddress}</span>
                             </td>
                         </tr>
                     `;
