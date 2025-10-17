@@ -7,22 +7,239 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .status-card { transition: all 0.3s; border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .status-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        /* 紧凑的导航栏 */
+        .navbar { padding: 0.25rem 0; }
+        .navbar-brand { font-size: 1.1rem; }
+        .navbar-text { font-size: 0.85rem; }
+        
+        /* 现代化卡片设计 */
+        .status-card { 
+            transition: all 0.3s; 
+            border: none; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+        .status-card:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15); 
+        }
+        
+        /* 状态卡片样式 */
+        .overview-card {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            border-radius: 12px;
+            background: white;
+            border: 1px solid #e9ecef;
+        }
+        .overview-card .card-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.8;
+        }
+        .overview-card .card-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            line-height: 1;
+        }
+        .overview-card .card-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+        .overview-card .card-subtitle {
+            font-size: 0.75rem;
+            color: #adb5bd;
+        }
+        
+        /* 系统状态卡片 - 绿色背景 */
+        .system-status-card {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        .system-status-card .card-icon {
+            color: rgba(255,255,255,0.9);
+        }
+        .system-status-card .card-number {
+            color: white;
+        }
+        .system-status-card .card-label {
+            color: rgba(255,255,255,0.9);
+        }
+        .system-status-card .card-subtitle {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        /* 设备状态样式 */
         .device-online { border-left: 4px solid #198754; }
         .device-offline { border-left: 4px solid #dc3545; }
         .device-error { border-left: 4px solid #ffc107; }
         .device-disabled { border-left: 4px solid #6c757d; }
+        
+        /* 限速状态样式 */
         .limit-active { background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; }
         .limit-inactive { background: linear-gradient(45deg, #51cf66, #40c057); color: white; }
+        
+        /* 紧凑的页面布局 */
+        .container { max-width: 1400px; }
+        .page-header { margin-bottom: 1.5rem; }
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 1rem;
+        }
+        
+        /* 设备卡片样式 */
+        .device-card {
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s;
+        }
+        .device-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .device-card .device-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .device-card .device-body {
+            padding: 1rem;
+        }
+        
+        /* 连接数显示 */
         .connection-badge { font-size: 0.8em; }
         .speed-value { font-family: 'Courier New', monospace; font-weight: bold; }
         .api-status { font-size: 0.75em; }
         .log-entry { font-family: 'Courier New', monospace; font-size: 0.8em; }
+        
+        /* 设备详情表格样式 */
+        .device-details-table {
+            font-size: 0.9rem;
+        }
+        .device-details-table .table {
+            margin-bottom: 0;
+        }
+        .device-details-table .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.75rem 0.5rem;
+        }
+        .device-details-table .table td {
+            padding: 0.75rem 0.5rem;
+            vertical-align: middle;
+            border-top: 1px solid #e9ecef;
+        }
+        .device-name-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.25rem;
+        }
+        .action-buttons .btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .status-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background-color: #ccc;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .toggle-switch.active {
+            background-color: #28a745;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: white;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+        .data-badge {
+            background-color: #f8f9fa;
+            color: #495057;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .url-badge {
+            background-color: #007bff;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            text-decoration: none;
+        }
+        .url-badge:hover {
+            color: white;
+            text-decoration: none;
+            opacity: 0.9;
+        }
+        .ip-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            font-family: 'Courier New', monospace;
+        }
+        .arrow-separator {
+            color: #6c757d;
+            font-weight: bold;
+            margin: 0 0.5rem;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .overview-card .card-number { font-size: 2rem; }
+            .overview-card .card-icon { font-size: 1.5rem; }
+            .device-details-table .table th,
+            .device-details-table .table td {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.8rem;
+            }
+            .action-buttons .btn {
+                width: 28px;
+                height: 28px;
+            }
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
         <div class="container">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-tachometer-alt me-2"></i>
@@ -36,98 +253,70 @@
     </nav>
 
     <div class="container">
-        <!-- 系统状态 -->
+        <!-- 状态概览 - 采用新的卡片设计 -->
         <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-info-circle me-2"></i>
-                            系统状态
-                        </h5>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="overview-card">
+                    <div class="card-icon">
+                        <i class="fas fa-satellite-dish text-primary"></i>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <strong>服务状态:</strong> 
-                                <span id="service-status" class="badge bg-success">运行中</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>版本:</strong> v2.0.0
-                            </div>
-                            <div class="col-md-4">
-                                <strong>最后更新:</strong> 
-                                <span id="last-update-time">-</span>
-                            </div>
-                        </div>
+                    <div class="card-number text-primary" id="lucky-devices-count">0</div>
+                    <div class="card-label">Lucky 设备</div>
+                    <div class="card-subtitle" id="lucky-active-count">0 个活跃</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="overview-card">
+                    <div class="card-icon">
+                        <i class="fas fa-server text-success"></i>
                     </div>
+                    <div class="card-number text-success" id="qbit-instances-count">0</div>
+                    <div class="card-label">QB 实例</div>
+                    <div class="card-subtitle" id="qbit-active-count">0 个在线</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="overview-card system-status-card" id="limit-status-card">
+                    <div class="card-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="card-number" id="connection-status">正常</div>
+                    <div class="card-label">限速状态</div>
+                    <div class="card-subtitle" id="active-connections">无活跃连接</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="overview-card">
+                    <div class="card-icon">
+                        <i class="fas fa-clock text-warning"></i>
+                    </div>
+                    <div class="card-number text-warning" id="next-check">2s</div>
+                    <div class="card-label">下次检查</div>
+                    <div class="card-subtitle" id="last-collection-time">-</div>
                 </div>
             </div>
         </div>
 
-        <!-- 状态概览 -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="card status-card">
-                    <div class="card-body text-center">
-                        <i class="fas fa-satellite-dish fa-2x text-primary mb-2"></i>
-                        <h4 id="lucky-devices-count">0</h4>
-                        <p class="text-muted mb-0">Lucky 设备</p>
-                        <small id="lucky-active-count" class="text-muted">0 个活跃</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card status-card">
-                    <div class="card-body text-center">
-                        <i class="fas fa-server fa-2x text-success mb-2"></i>
-                        <h4 id="qbit-instances-count">0</h4>
-                        <p class="text-muted mb-0">QB 实例</p>
-                        <small id="qbit-active-count" class="text-muted">0 个在线</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card status-card" id="limit-status-card">
-                    <div class="card-body text-center">
-                        <i class="fas fa-network-wired fa-2x mb-2"></i>
-                        <h4 id="connection-status">正常</h4>
-                        <p class="mb-0">限速状态</p>
-                        <small id="active-connections" class="text-muted">0 个活跃连接</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card status-card bg-light">
-                    <div class="card-body text-center">
-                        <i class="fas fa-clock fa-2x text-warning mb-2"></i>
-                        <h4 id="next-check">2s</h4>
-                        <p class="text-muted mb-0">下次检查</p>
-                        <small id="last-collection-time" class="text-muted">-</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        <!-- 设备状态展示区域 -->
         <div class="row">
             <!-- Lucky 设备状态 -->
-            <div class="col-md-6 mb-4">
-                <div class="card">
+            <div class="col-lg-6 mb-4">
+                <div class="card status-card">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
+                        <h6 class="mb-0">
                             <i class="fas fa-satellite-dish me-2"></i>
                             Lucky 设备状态
-                        </h5>
+                        </h6>
                         <div>
-                            <button class="btn btn-sm btn-light me-2" onclick="testLuckyConnection(0)">
-                                <i class="fas fa-plug"></i> 测试连接
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="refreshLuckyStatus()">
+                                <i class="fas fa-sync-alt"></i>
                             </button>
-                            <button class="btn btn-sm btn-light" onclick="refreshLuckyStatus()">
-                                <i class="fas fa-sync-alt"></i> 刷新
+                            <button class="btn btn-sm btn-outline-light" onclick="window.location.href='#lucky-management'">
+                                <i class="fas fa-cog"></i> 管理
                             </button>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-0">
                         <div id="lucky-status-content">
                             <div class="text-center py-4">
                                 <div class="spinner-border text-primary" role="status">
@@ -141,23 +330,23 @@
             </div>
 
             <!-- qBittorrent 状态 -->
-            <div class="col-md-6 mb-4">
-                <div class="card">
+            <div class="col-lg-6 mb-4">
+                <div class="card status-card">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
+                        <h6 class="mb-0">
                             <i class="fas fa-server me-2"></i>
                             qBittorrent 状态
-                        </h5>
+                        </h6>
                         <div>
-                            <button class="btn btn-sm btn-light me-2" onclick="testQbitConnection(0)">
-                                <i class="fas fa-plug"></i> 测试连接
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="refreshQbitStatus()">
+                                <i class="fas fa-sync-alt"></i>
                             </button>
-                            <button class="btn btn-sm btn-light" onclick="refreshQbitStatus()">
-                                <i class="fas fa-sync-alt"></i> 刷新
+                            <button class="btn btn-sm btn-outline-light" onclick="window.location.href='#qbit-management'">
+                                <i class="fas fa-cog"></i> 管理
                             </button>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-0">
                         <div id="qbit-status-content">
                             <div class="text-center py-4">
                                 <div class="spinner-border text-success" role="status">
@@ -171,104 +360,94 @@
             </div>
         </div>
 
-        <!-- 配置管理 -->
-        <div class="row mt-4">
-            <div class="col-md-6 mb-4">
-                <div class="card">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-satellite-dish me-2"></i>
-                            Lucky 设备管理
-                        </h5>
-                        <button class="btn btn-light btn-sm" onclick="showLuckyDeviceModal()">
-                            <i class="fas fa-plus"></i> 添加设备
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div id="lucky-devices-config">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">加载中...</span>
-                                </div>
-                                <p class="mt-2 text-muted">正在加载设备配置...</p>
-                            </div>
+        <!-- 快速管理入口 -->
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-3">
+                <div class="card status-card">
+                    <div class="card-body text-center">
+                        <div class="card-icon mb-3">
+                            <i class="fas fa-satellite-dish text-primary" style="font-size: 2.5rem;"></i>
                         </div>
+                        <h5 class="card-title">Lucky 设备管理</h5>
+                        <p class="card-text text-muted">管理 Lucky 设备配置，添加、编辑或删除设备</p>
+                        <button class="btn btn-primary" onclick="showLuckyDeviceModal()">
+                            <i class="fas fa-plus me-2"></i>添加设备
+                        </button>
+                        <button class="btn btn-outline-primary ms-2" onclick="showLuckyDevicesList()">
+                            <i class="fas fa-list me-2"></i>查看所有
+                        </button>
+                        <button class="btn btn-outline-info ms-2" onclick="showLuckyDeviceDetails()">
+                            <i class="fas fa-table me-2"></i>设备详情
+                        </button>
                     </div>
                 </div>
             </div>
-
-            <div class="col-md-6 mb-4">
-                <div class="card">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-server me-2"></i>
-                            qBittorrent 实例管理
-                        </h5>
-                        <button class="btn btn-light btn-sm" onclick="showQbitInstanceModal()">
-                            <i class="fas fa-plus"></i> 添加实例
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div id="qbit-instances-config">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-success" role="status">
-                                    <span class="visually-hidden">加载中...</span>
-                                </div>
-                                <p class="mt-2 text-muted">正在加载实例配置...</p>
-                            </div>
+            <div class="col-lg-6 mb-3">
+                <div class="card status-card">
+                    <div class="card-body text-center">
+                        <div class="card-icon mb-3">
+                            <i class="fas fa-server text-success" style="font-size: 2.5rem;"></i>
                         </div>
+                        <h5 class="card-title">qBittorrent 实例管理</h5>
+                        <p class="card-text text-muted">管理 qBittorrent 实例配置，添加、编辑或删除实例</p>
+                        <button class="btn btn-success" onclick="showQbitInstanceModal()">
+                            <i class="fas fa-plus me-2"></i>添加实例
+                        </button>
+                        <button class="btn btn-outline-success ms-2" onclick="showQbitInstancesList()">
+                            <i class="fas fa-list me-2"></i>查看所有
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- 控制器设置 -->
-        <div class="row mt-4">
+        <div class="row mb-4">
             <div class="col-12">
-                <div class="card">
+                <div class="card status-card">
                     <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">
+                        <h6 class="mb-0">
                             <i class="fas fa-cogs me-2"></i>
                             控制器设置
-                        </h5>
+                        </h6>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <label class="form-label">轮询间隔 (秒)</label>
-                                <input type="number" class="form-control" id="poll-interval" value="2" min="1" max="60">
+                        <div class="row g-3">
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <label class="form-label small">轮询间隔 (秒)</label>
+                                <input type="number" class="form-control form-control-sm" id="poll-interval" value="2" min="1" max="60">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">限速触发延迟 (秒)</label>
-                                <input type="number" class="form-control" id="limit-on-delay" value="5" min="1" max="300">
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <label class="form-label small">限速触发延迟 (秒)</label>
+                                <input type="number" class="form-control form-control-sm" id="limit-on-delay" value="5" min="1" max="300">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">恢复延迟 (秒)</label>
-                                <input type="number" class="form-control" id="limit-off-delay" value="30" min="1" max="600">
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <label class="form-label small">恢复延迟 (秒)</label>
+                                <input type="number" class="form-control form-control-sm" id="limit-off-delay" value="30" min="1" max="600">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">限速下载 (KB/s)</label>
-                                <input type="number" class="form-control" id="limited-download" value="1024" min="0">
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <label class="form-label small">限速下载 (KB/s)</label>
+                                <input type="number" class="form-control form-control-sm" id="limited-download" value="1024" min="0">
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <label class="form-label small">限速上传 (KB/s)</label>
+                                <input type="number" class="form-control form-control-sm" id="limited-upload" value="512" min="0">
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <label class="form-label small">正常下载 (KB/s)</label>
+                                <input type="number" class="form-control form-control-sm" id="normal-download" value="0" min="0">
+                                <small class="text-muted">0 = 不限速</small>
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-md-3">
-                                <label class="form-label">限速上传 (KB/s)</label>
-                                <input type="number" class="form-control" id="limited-upload" value="512" min="0">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">正常下载 (KB/s)</label>
-                                <input type="number" class="form-control" id="normal-download" value="0" min="0">
+                        <div class="row g-3 mt-2">
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <label class="form-label small">正常上传 (KB/s)</label>
+                                <input type="number" class="form-control form-control-sm" id="normal-upload" value="0" min="0">
                                 <small class="text-muted">0 = 不限速</small>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">正常上传 (KB/s)</label>
-                                <input type="number" class="form-control" id="normal-upload" value="0" min="0">
-                                <small class="text-muted">0 = 不限速</small>
-                            </div>
-                            <div class="col-md-3 d-flex align-items-end">
-                                <button class="btn btn-primary w-100" onclick="saveControllerSettings()">
-                                    <i class="fas fa-save me-2"></i>保存设置
+                            <div class="col-lg-2 col-md-4 col-sm-6 d-flex align-items-end">
+                                <button class="btn btn-primary btn-sm w-100" onclick="saveControllerSettings()">
+                                    <i class="fas fa-save me-1"></i>保存设置
                                 </button>
                             </div>
                         </div>
@@ -278,31 +457,31 @@
         </div>
 
         <!-- 调试信息 -->
-        <div class="row mt-4">
+        <div class="row mb-4">
             <div class="col-12">
-                <div class="card">
+                <div class="card status-card">
                     <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">
+                        <h6 class="mb-0">
                             <i class="fas fa-bug me-2"></i>
                             调试信息
-                        </h5>
+                        </h6>
                     </div>
                     <div class="card-body">
-                        <div class="row">
+                        <div class="row g-2 mb-3">
                             <div class="col-md-6">
-                                <button class="btn btn-outline-primary w-100 mb-2" onclick="getDebugConfig()">
-                                    <i class="fas fa-cog me-2"></i>查看配置
+                                <button class="btn btn-outline-primary btn-sm w-100" onclick="getDebugConfig()">
+                                    <i class="fas fa-cog me-1"></i>查看配置
                                 </button>
                             </div>
                             <div class="col-md-6">
-                                <button class="btn btn-outline-secondary w-100 mb-2" onclick="clearLogs()">
-                                    <i class="fas fa-trash me-2"></i>清空日志
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearLogs()">
+                                    <i class="fas fa-trash me-1"></i>清空日志
                                 </button>
                             </div>
                         </div>
-                        <div class="mt-3">
-                            <h6>系统日志:</h6>
-                            <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                        <div>
+                            <h6 class="small">系统日志:</h6>
+                            <div class="border rounded p-2 bg-light" style="max-height: 150px; overflow-y: auto;">
                                 <div id="debug-logs">
                                     <div class="log-entry text-muted">等待日志信息...</div>
                                 </div>
@@ -479,108 +658,9 @@
             }
 
             renderConfigSections() {
-                this.renderLuckyDevicesConfig();
-                this.renderQbitInstancesConfig();
                 this.renderControllerSettings();
             }
 
-            renderLuckyDevicesConfig() {
-                const container = document.getElementById('lucky-devices-config');
-                const devices = this.config.lucky_devices || [];
-                
-                if (devices.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center py-4 text-muted">
-                            <i class="fas fa-satellite-dish fa-2x mb-2"></i>
-                            <p>暂无 Lucky 设备</p>
-                            <small>点击上方"添加设备"按钮开始配置</small>
-                        </div>
-                    `;
-                    return;
-                }
-
-                let html = '';
-                devices.forEach((device, index) => {
-                    const statusClass = device.enabled ? 'success' : 'secondary';
-                    const statusText = device.enabled ? '启用' : '禁用';
-                    
-                    html += `
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="mb-0">${device.name}</h6>
-                                    <span class="badge bg-${statusClass}">${statusText}</span>
-                                </div>
-                                <p class="text-muted mb-2">
-                                    <small>API: ${device.api_url}</small><br>
-                                    <small>权重: ${device.weight}</small>
-                                </p>
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="editLuckyDevice(${index})">
-                                        <i class="fas fa-edit"></i> 编辑
-                                    </button>
-                                    <button class="btn btn-outline-danger" onclick="deleteLuckyDevice(${index})">
-                                        <i class="fas fa-trash"></i> 删除
-                                    </button>
-                                    <button class="btn btn-outline-info" onclick="testLuckyConnection(${index})">
-                                        <i class="fas fa-plug"></i> 测试
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-            }
-
-            renderQbitInstancesConfig() {
-                const container = document.getElementById('qbit-instances-config');
-                const instances = this.config.qbittorrent_instances || [];
-                
-                if (instances.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center py-4 text-muted">
-                            <i class="fas fa-server fa-2x mb-2"></i>
-                            <p>暂无 qBittorrent 实例</p>
-                            <small>点击上方"添加实例"按钮开始配置</small>
-                        </div>
-                    `;
-                    return;
-                }
-
-                let html = '';
-                instances.forEach((instance, index) => {
-                    const statusClass = instance.enabled ? 'success' : 'secondary';
-                    const statusText = instance.enabled ? '启用' : '禁用';
-                    
-                    html += `
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="mb-0">${instance.name}</h6>
-                                    <span class="badge bg-${statusClass}">${statusText}</span>
-                                </div>
-                                <p class="text-muted mb-2">
-                                    <small>地址: ${instance.host}</small><br>
-                                    <small>用户: ${instance.username}</small>
-                                </p>
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="editQbitInstance(${index})">
-                                        <i class="fas fa-edit"></i> 编辑
-                                    </button>
-                                    <button class="btn btn-outline-danger" onclick="deleteQbitInstance(${index})">
-                                        <i class="fas fa-trash"></i> 删除
-                                    </button>
-                                    <button class="btn btn-outline-info" onclick="testQbitConnection(${index})">
-                                        <i class="fas fa-plug"></i> 测试
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-            }
 
             renderControllerSettings() {
                 const settings = this.config.controller_settings || {};
@@ -630,18 +710,20 @@
                 const container = document.getElementById('lucky-status-content');
                 if (status.devices && status.devices.length > 0) {
                     let html = '';
-                    status.devices.forEach(device => {
+                    status.devices.forEach((device, index) => {
                         const statusClass = this.getLuckyStatusClass(device);
                         const statusText = this.getLuckyStatusText(device);
                         const statusBadge = this.getLuckyStatusBadge(device);
                         
                         html += `
-                            <div class="card mb-3 ${statusClass}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="device-card ${statusClass}">
+                                <div class="device-header">
+                                    <div class="d-flex justify-content-between align-items-center">
                                         <h6 class="mb-0">${device.device_name}</h6>
                                         <span class="badge ${statusBadge}">${statusText}</span>
                                     </div>
+                                </div>
+                                <div class="device-body">
                                     ${device.success ? `
                                         <div class="row text-center">
                                             <div class="col-6 border-end">
@@ -726,18 +808,20 @@
                 const container = document.getElementById('qbit-status-content');
                 if (status.instances && status.instances.length > 0) {
                     let html = '';
-                    status.instances.forEach(instance => {
+                    status.instances.forEach((instance, index) => {
                         const isOnline = instance.success && instance.status === 'online';
                         const statusBadge = this.getQbitStatusBadge(instance);
                         const statusText = this.getQbitStatusText(instance);
                         
                         html += `
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="device-card">
+                                <div class="device-header">
+                                    <div class="d-flex justify-content-between align-items-center">
                                         <h6 class="mb-0">${instance.instance_name}</h6>
                                         <span class="badge ${statusBadge}">${statusText}</span>
                                     </div>
+                                </div>
+                                <div class="device-body">
                                     ${isOnline ? `
                                         <div class="row text-center">
                                             <div class="col-6 border-end">
@@ -1034,6 +1118,291 @@
             modal.show();
         }
 
+        function showLuckyDevicesList() {
+            const devices = window.dashboard.config.lucky_devices || [];
+            let html = '<div class="modal fade" id="luckyDevicesListModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Lucky 设备列表</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body">';
+            
+            if (devices.length === 0) {
+                html += '<div class="text-center py-4 text-muted"><i class="fas fa-satellite-dish fa-2x mb-2"></i><p>暂无 Lucky 设备</p></div>';
+            } else {
+                devices.forEach((device, index) => {
+                    const statusClass = device.enabled ? 'success' : 'secondary';
+                    const statusText = device.enabled ? '启用' : '禁用';
+                    
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">${device.name}</h6>
+                                    <span class="badge bg-${statusClass}">${statusText}</span>
+                                </div>
+                                <p class="text-muted mb-2">
+                                    <small>API: ${device.api_url}</small><br>
+                                    <small>权重: ${device.weight}</small>
+                                </p>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="editLuckyDevice(${index}); bootstrap.Modal.getInstance(document.getElementById('luckyDevicesListModal')).hide();">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteLuckyDevice(${index}); bootstrap.Modal.getInstance(document.getElementById('luckyDevicesListModal')).hide();">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="testLuckyConnection(${index})">
+                                        <i class="fas fa-plug"></i> 测试
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += '</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button></div></div></div></div>';
+            
+            // 移除已存在的模态框
+            const existingModal = document.getElementById('luckyDevicesListModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // 添加新的模态框
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('luckyDevicesListModal'));
+            modal.show();
+        }
+
+        function showQbitInstancesList() {
+            const instances = window.dashboard.config.qbittorrent_instances || [];
+            let html = '<div class="modal fade" id="qbitInstancesListModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">qBittorrent 实例列表</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body">';
+            
+            if (instances.length === 0) {
+                html += '<div class="text-center py-4 text-muted"><i class="fas fa-server fa-2x mb-2"></i><p>暂无 qBittorrent 实例</p></div>';
+            } else {
+                instances.forEach((instance, index) => {
+                    const statusClass = instance.enabled ? 'success' : 'secondary';
+                    const statusText = instance.enabled ? '启用' : '禁用';
+                    
+                    html += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">${instance.name}</h6>
+                                    <span class="badge bg-${statusClass}">${statusText}</span>
+                                </div>
+                                <p class="text-muted mb-2">
+                                    <small>地址: ${instance.host}</small><br>
+                                    <small>用户: ${instance.username}</small>
+                                </p>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="editQbitInstance(${index}); bootstrap.Modal.getInstance(document.getElementById('qbitInstancesListModal')).hide();">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteQbitInstance(${index}); bootstrap.Modal.getInstance(document.getElementById('qbitInstancesListModal')).hide();">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="testQbitConnection(${index})">
+                                        <i class="fas fa-plug"></i> 测试
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += '</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button></div></div></div></div>';
+            
+            // 移除已存在的模态框
+            const existingModal = document.getElementById('qbitInstancesListModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // 添加新的模态框
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('qbitInstancesListModal'));
+            modal.show();
+        }
+
+        async function showLuckyDeviceDetails() {
+            try {
+                // 获取最新的设备状态数据
+                const response = await fetch('/api/lucky/status');
+                const statusData = await response.json();
+                
+                const devices = statusData.devices || [];
+                const configDevices = window.dashboard.config.lucky_devices || [];
+                
+                let html = `
+                    <div class="modal fade" id="luckyDeviceDetailsModal" tabindex="-1">
+                        <div class="modal-dialog modal-xl">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-table me-2"></i>Lucky 设备详情
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body device-details-table">
+                `;
+                
+                if (devices.length === 0) {
+                    html += '<div class="text-center py-4 text-muted"><i class="fas fa-satellite-dish fa-2x mb-2"></i><p>暂无设备数据</p></div>';
+                } else {
+                    html += `
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>设备名称</th>
+                                        <th>操作</th>
+                                        <th>状态控制</th>
+                                        <th>连接数</th>
+                                        <th>下载数据</th>
+                                        <th>上传数据</th>
+                                        <th>外部URL</th>
+                                        <th>内部地址</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    devices.forEach((device, index) => {
+                        const configDevice = configDevices.find(cd => cd.name === device.device_name) || {};
+                        const isOnline = device.success && device.status === 'online';
+                        const hasConnections = device.connections > 0;
+                        
+                        // 格式化数据大小
+                        const formatBytes = (bytes) => {
+                            if (bytes === 0) return '0 B';
+                            const k = 1024;
+                            const sizes = ['B', 'KB', 'MB', 'GB'];
+                            const i = Math.floor(Math.log(bytes) / Math.log(k));
+                            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                        };
+                        
+                        // 从API URL提取内部地址
+                        const apiUrl = configDevice.api_url || '';
+                        const urlMatch = apiUrl.match(/http:\/\/([^:]+):(\d+)/);
+                        const internalAddress = urlMatch ? `http://${urlMatch[1]}:${urlMatch[2]}` : '未知';
+                        
+                        // 生成外部URL（示例，实际应该从配置中获取）
+                        const externalUrl = `https://${device.device_name.toLowerCase()}.hsdzdh.com`;
+                        
+                        html += `
+                            <tr>
+                                <td>
+                                    <span class="device-name-badge">${device.device_name}</span>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-primary btn-sm" onclick="editLuckyDevice(${index})" title="编辑">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteLuckyDevice(${index})" title="删除">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="status-toggle">
+                                        <button class="btn btn-secondary btn-sm" title="删除">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        <div class="toggle-switch ${configDevice.enabled ? 'active' : ''}" onclick="toggleDeviceStatus(${index})">
+                                        </div>
+                                        <span class="small">${configDevice.enabled ? '开' : '关'}</span>
+                                        <button class="btn btn-warning btn-sm" title="日志">
+                                            <i class="fas fa-eye"></i> 日志
+                                        </button>
+                                        <button class="btn btn-success btn-sm" title="反向代理">
+                                            反向代理
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="data-badge">
+                                        <i class="fas fa-link"></i>
+                                        ${device.connections}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="data-badge">
+                                        <i class="fas fa-arrow-down"></i>
+                                        ${formatBytes(device.download_bytes || 0)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="data-badge">
+                                        <i class="fas fa-arrow-up"></i>
+                                        ${formatBytes(device.upload_bytes || 0)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="${externalUrl}" target="_blank" class="url-badge">
+                                        ${externalUrl}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="arrow-separator">→</span>
+                                    <span class="ip-badge">${internalAddress}</span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+                
+                html += `
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                                    <button type="button" class="btn btn-primary" onclick="refreshLuckyStatus()">
+                                        <i class="fas fa-sync-alt me-1"></i>刷新数据
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 移除已存在的模态框
+                const existingModal = document.getElementById('luckyDeviceDetailsModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // 添加新的模态框
+                document.body.insertAdjacentHTML('beforeend', html);
+                
+                // 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('luckyDeviceDetailsModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('获取设备详情失败:', error);
+                alert('获取设备详情失败: ' + error.message);
+            }
+        }
+
+        function toggleDeviceStatus(index) {
+            const devices = window.dashboard.config.lucky_devices || [];
+            if (devices[index]) {
+                devices[index].enabled = !devices[index].enabled;
+                // 这里可以添加保存配置的逻辑
+                window.dashboard.addLog(`设备 ${devices[index].name} 状态已切换为 ${devices[index].enabled ? '启用' : '禁用'}`, 'info');
+            }
+        }
+
         function showQbitInstanceModal() {
             const form = document.getElementById('qbit-instance-form');
             const modal = new bootstrap.Modal(document.getElementById('qbitInstanceModal'));
@@ -1268,3 +1637,4 @@
     </script>
 </body>
 </html>
+

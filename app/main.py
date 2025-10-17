@@ -266,6 +266,11 @@ class LuckyMonitor:
                         
                         print(f"📊 {device_config['name']} - 连接数: {connections}, 加权: {weighted_connections}")
                         
+                        # 解析详细的连接信息
+                        detailed_connections = self._parse_detailed_connections(data)
+                        total_download_bytes = sum(conn.get("download_bytes", 0) for conn in detailed_connections)
+                        total_upload_bytes = sum(conn.get("upload_bytes", 0) for conn in detailed_connections)
+                        
                         return {
                             "success": True,
                             "device_name": device_config["name"],
@@ -274,6 +279,10 @@ class LuckyMonitor:
                             "status": "online",
                             "last_update": datetime.now().isoformat(),
                             "raw_data": data,
+                            "api_url": api_url,
+                            "download_bytes": total_download_bytes,
+                            "upload_bytes": total_upload_bytes,
+                            "detailed_connections": detailed_connections,
                             "attempt": attempt + 1
                         }
                     else:
