@@ -338,9 +338,50 @@
         }
         
         /* 强制所有列都有相同的宽度 */
-        #overview-cards .col-3 {
-            flex: 0 0 25% !important;
-            max-width: 25% !important;
+        #overview-cards .col-2 {
+            flex: 0 0 20% !important;
+            max-width: 20% !important;
+        }
+        
+        /* Logo卡片特殊样式 */
+        .logo-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        
+        .logo-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .logo-icon {
+            font-size: 2rem;
+            margin-right: 0.75rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .logo-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1;
+            margin-bottom: 0.2rem;
+        }
+        
+        .logo-subtitle {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1;
         }
         
         /* 为固定卡片调整页面内容的上边距 */
@@ -389,7 +430,20 @@
     <div id="overview-cards">
         <div class="container">
             <div class="row">
-                <div class="col-3">
+                <div class="col-2">
+                    <div class="overview-card logo-card">
+                        <div class="logo-content">
+                            <div class="logo-icon">
+                                <i class="fas fa-home text-primary"></i>
+                            </div>
+                            <div class="logo-text">
+                                <div class="logo-title">SpeedHive</div>
+                                <div class="logo-subtitle">智能控制</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-2">
                     <div class="overview-card">
                         <div class="card-icon">
                             <i class="fas fa-satellite-dish text-primary"></i>
@@ -401,7 +455,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-2">
                     <div class="overview-card">
                         <div class="card-icon">
                             <i class="fas fa-server text-success"></i>
@@ -413,7 +467,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-2">
                     <div class="overview-card system-status-card" id="limit-status-card">
                         <div class="card-icon">
                             <i class="fas fa-shield-alt"></i>
@@ -425,7 +479,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-2">
                     <div class="overview-card">
                         <div class="card-icon">
                             <i class="fas fa-clock text-warning"></i>
