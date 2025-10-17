@@ -27,27 +27,39 @@
         
         /* 状态卡片样式 */
         .overview-card {
-            text-align: center;
-            padding: 1.5rem 1rem;
+            padding: 1rem;
             border-radius: 12px;
             background: white;
             border: 1px solid #e9ecef;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .overview-card .card-icon {
-            font-size: 2rem;
-            margin-bottom: 0.75rem;
+            font-size: 1.8rem;
             opacity: 0.8;
+            flex-shrink: 0;
         }
         .overview-card .card-number {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 700;
-            margin-bottom: 0.25rem;
             line-height: 1;
+            flex-shrink: 0;
+            margin: 0 1rem;
+        }
+        .overview-card .card-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            text-align: right;
+            flex: 1;
         }
         .overview-card .card-label {
             font-size: 0.9rem;
             color: #6c757d;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.1rem;
+            font-weight: 500;
         }
         .overview-card .card-subtitle {
             font-size: 0.75rem;
@@ -70,6 +82,14 @@
         }
         .system-status-card .card-subtitle {
             color: rgba(255,255,255,0.7);
+        }
+        
+        /* 限速状态卡片特殊样式 */
+        .limit-active {
+            background: linear-gradient(135deg, #dc3545, #fd7e14) !important;
+        }
+        .limit-inactive {
+            background: linear-gradient(135deg, #28a745, #20c997) !important;
         }
         
         /* 设备状态样式 */
@@ -295,8 +315,11 @@
         
         /* 响应式调整 */
         @media (max-width: 768px) {
-            .overview-card .card-number { font-size: 2rem; }
-            .overview-card .card-icon { font-size: 1.5rem; }
+            .overview-card { height: 70px; padding: 0.75rem; }
+            .overview-card .card-number { font-size: 1.8rem; margin: 0 0.5rem; }
+            .overview-card .card-icon { font-size: 1.4rem; }
+            .overview-card .card-label { font-size: 0.8rem; }
+            .overview-card .card-subtitle { font-size: 0.7rem; }
             .device-details-table .table th,
             .device-details-table .table td {
                 padding: 0.5rem 0.25rem;
@@ -332,28 +355,34 @@
                         <i class="fas fa-satellite-dish text-primary"></i>
                     </div>
                     <div class="card-number text-primary" id="lucky-devices-count">0</div>
-                    <div class="card-label">Lucky 设备</div>
-                    <div class="card-subtitle" id="lucky-active-count">0 个活跃</div>
-                </div>
-            </div>
+                    <div class="card-text">
+                        <div class="card-label">Lucky 设备</div>
+                        <div class="card-subtitle" id="lucky-active-count">0 个活跃</div>
+                            </div>
+                            </div>
+                            </div>
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="overview-card">
                     <div class="card-icon">
                         <i class="fas fa-server text-success"></i>
-                    </div>
+                        </div>
                     <div class="card-number text-success" id="qbit-instances-count">0</div>
-                    <div class="card-label">QB 实例</div>
-                    <div class="card-subtitle" id="qbit-active-count">0 个在线</div>
+                    <div class="card-text">
+                        <div class="card-label">QB 实例</div>
+                        <div class="card-subtitle" id="qbit-active-count">0 个在线</div>
+                    </div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="overview-card system-status-card" id="limit-status-card">
                     <div class="card-icon">
                         <i class="fas fa-shield-alt"></i>
-                    </div>
+        </div>
                     <div class="card-number" id="connection-status">正常</div>
-                    <div class="card-label">限速状态</div>
-                    <div class="card-subtitle" id="active-connections">无活跃连接</div>
+                    <div class="card-text">
+                        <div class="card-label">限速状态</div>
+                        <div class="card-subtitle" id="active-connections">无活跃连接</div>
+                    </div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6 mb-3">
@@ -362,37 +391,67 @@
                         <i class="fas fa-clock text-warning"></i>
                     </div>
                     <div class="card-number text-warning" id="next-check">2s</div>
-                    <div class="card-label">下次检查</div>
-                    <div class="card-subtitle" id="last-collection-time">-</div>
+                    <div class="card-text">
+                        <div class="card-label">下次检查</div>
+                        <div class="card-subtitle" id="last-collection-time">-</div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- 设备状态表格展示区域 -->
         <div class="row">
-            <div class="col-12 mb-4">
+            <!-- qB客户端实体总览 -->
+            <div class="col-lg-6 mb-4">
                 <div class="card status-card">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">
-                            <i class="fas fa-table me-2"></i>
-                            qBittorrent实例状态总览
+                            <i class="fas fa-server me-2"></i>
+                            qB客户端实体总览
+                        </h6>
+                        <div>
+                            <button class="btn btn-sm btn-outline-light" onclick="refreshAllStatus()">
+                                <i class="fas fa-sync-alt"></i> 刷新
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="qbit-table-content">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                                <p class="mt-2 text-muted">正在加载qBittorrent实例数据...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lucky设备总览 -->
+            <div class="col-lg-6 mb-4">
+                <div class="card status-card">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-satellite-dish me-2"></i>
+                            Lucky设备总览
                         </h6>
                         <div>
                             <button class="btn btn-sm btn-outline-light me-2" onclick="refreshAllStatus()">
                                 <i class="fas fa-sync-alt"></i> 刷新
                             </button>
                             <button class="btn btn-sm btn-outline-light" onclick="showLuckyDeviceModal()">
-                                <i class="fas fa-plus"></i> 添加Lucky设备
+                                <i class="fas fa-plus"></i> 添加设备
                             </button>
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <div id="devices-table-content">
+                        <div id="lucky-table-content">
                             <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
+                                <div class="spinner-border text-success" role="status">
                                     <span class="visually-hidden">加载中...</span>
                                 </div>
-                                <p class="mt-2 text-muted">正在加载qBittorrent实例数据...</p>
+                                <p class="mt-2 text-muted">正在加载Lucky设备数据...</p>
                             </div>
                         </div>
                     </div>
@@ -412,16 +471,16 @@
                         <p class="card-text text-muted">管理 Lucky 设备配置，添加、编辑或删除设备</p>
                         <button class="btn btn-primary" onclick="showLuckyDeviceModal()">
                             <i class="fas fa-plus me-2"></i>添加设备
-                        </button>
+                            </button>
                         <button class="btn btn-outline-primary ms-2" onclick="showLuckyDevicesList()">
                             <i class="fas fa-list me-2"></i>查看所有
-                        </button>
+                            </button>
                         <button class="btn btn-outline-info ms-2" onclick="showLuckyDeviceDetails()">
                             <i class="fas fa-table me-2"></i>设备详情
                         </button>
                     </div>
-                </div>
-            </div>
+                                </div>
+                            </div>
             <div class="col-lg-6 mb-3">
                 <div class="card status-card">
                     <div class="card-body text-center">
@@ -472,7 +531,7 @@
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <label class="form-label small">限速上传 (KB/s)</label>
                                 <input type="number" class="form-control form-control-sm" id="limited-upload" value="512" min="0">
-                            </div>
+                        </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <label class="form-label small">正常下载 (KB/s)</label>
                                 <input type="number" class="form-control form-control-sm" id="normal-download" value="0" min="0">
@@ -745,67 +804,10 @@
                 }
             }
 
-            renderDevicesTable(luckyStatus, qbitStatus) {
-                const container = document.getElementById('devices-table-content');
-                let allDevices = [];
+            renderQbitTable(qbitStatus) {
+                const container = document.getElementById('qbit-table-content');
                 
-                // 处理Lucky设备（如果有配置的话）
-                if (luckyStatus.devices && luckyStatus.devices.length > 0) {
-                    luckyStatus.devices.forEach(device => {
-                        if (device.success && device.services) {
-                            device.services.forEach(service => {
-                                allDevices.push({
-                                    type: 'lucky',
-                                    device_name: device.device_name,
-                                    service_name: service.remark || '未命名服务', // 使用Remark字段作为设备名称
-                                    service_type: service.service_type,
-                                    enabled: service.enabled,
-                                    connections: device.connections,
-                                    download_bytes: device.download_bytes || 0,
-                                    upload_bytes: device.upload_bytes || 0,
-                                    domains: service.domains,
-                                    locations: service.locations,
-                                    last_error: service.last_error,
-                                    cache_enabled: service.cache_enabled,
-                                    cache_size: service.cache_size,
-                                    cache_files: service.cache_files,
-                                    last_update: device.last_update
-                                });
-                            });
-                        }
-                    });
-                }
-                
-                // 处理qBittorrent实例（主要显示内容）- 使用Remark字段作为设备名称
-                if (qbitStatus.instances && qbitStatus.instances.length > 0) {
-                    qbitStatus.instances.forEach(instance => {
-                        if (instance.success) {
-                            allDevices.push({
-                                type: 'qbit',
-                                device_name: instance.instance_name,
-                                service_name: instance.remark || instance.instance_name, // 使用Remark字段，如果没有则使用实例名称
-                                service_type: 'qbittorrent',
-                                enabled: instance.status === 'online',
-                                connections: 0,
-                                download_bytes: instance.download_speed || 0,
-                                upload_bytes: instance.upload_speed || 0,
-                                total_torrents: instance.total_torrents || 0, // 做种总数
-                                active_seeds: instance.active_seeds || 0, // 活动做种数
-                                active_downloads: instance.active_downloads || 0, // 活动下载数
-                                connection_status: instance.connection_status || 'unknown', // 连接状态
-                                domains: [],
-                                locations: [instance.host],
-                                last_error: instance.error || '',
-                                cache_enabled: false,
-                                cache_size: 0,
-                                cache_files: 0,
-                                last_update: instance.last_update
-                            });
-                        }
-                    });
-                }
-                
-                if (allDevices.length === 0) {
+                if (!qbitStatus.instances || qbitStatus.instances.length === 0) {
                     container.innerHTML = `
                         <div class="text-center py-4 text-muted">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
@@ -820,33 +822,30 @@
                         <table class="table table-hover mb-0 table-fixed">
                             <thead>
                                 <tr>
-                                    <th style="width: 15%;">设备名称</th>
-                                    <th style="width: 12%;">连接状态</th>
-                                    <th style="width: 12%;">状态控制</th>
-                                    <th style="width: 10%;">连接数</th>
-                                    <th style="width: 12%;">下载数据</th>
-                                    <th style="width: 12%;">上传数据</th>
-                                    <th style="width: 10%;">做种总数</th>
-                                    <th style="width: 10%;">活动数量</th>
+                                    <th style="width: 20%;">设备名称</th>
+                                    <th style="width: 15%;">连接状态</th>
+                                    <th style="width: 15%;">下行速度</th>
+                                    <th style="width: 15%;">上行速度</th>
+                                    <th style="width: 15%;">做种总数</th>
+                                    <th style="width: 20%;">活动数量</th>
                                 </tr>
                             </thead>
                             <tbody>
                 `;
                 
-                allDevices.forEach((device, index) => {
-                    // 格式化数据大小
-                    const formatBytes = (bytes) => {
-                        if (bytes === 0) return '0 B';
-                        const k = 1024;
-                        const sizes = ['B', 'KB', 'MB', 'GB'];
-                        const i = Math.floor(Math.log(bytes) / Math.log(k));
-                        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-                    };
-                    
-                    // 获取连接状态显示
-                    let connectionStatusHtml = '';
-                    if (device.type === 'qbit') {
-                        const status = device.connection_status || 'unknown';
+                qbitStatus.instances.forEach((instance, index) => {
+                    if (instance.success) {
+                        // 格式化数据大小
+                        const formatBytes = (bytes) => {
+                            if (bytes === 0) return '0 B';
+                            const k = 1024;
+                            const sizes = ['B', 'KB', 'MB', 'GB'];
+                            const i = Math.floor(Math.log(bytes) / Math.log(k));
+                            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                        };
+                        
+                        // 获取连接状态显示
+                        const status = instance.connection_status || 'unknown';
                         let statusClass = '';
                         let statusIcon = '';
                         let statusText = '';
@@ -873,29 +872,124 @@
                                 statusText = '未知';
                         }
                         
-                        connectionStatusHtml = `
-                            <span class="status-badge ${statusClass}">
-                                <i class="${statusIcon}"></i>
-                                ${statusText}
-                            </span>
-                        `;
-                    } else {
-                        // Lucky设备显示在线状态（如果存在的话）
-                        connectionStatusHtml = `
-                            <span class="status-badge ${device.enabled ? 'status-online' : 'status-offline'}">
-                                <i class="fas fa-${device.enabled ? 'check-circle' : 'times-circle'}"></i>
-                                ${device.enabled ? '在线' : '离线'}
-                            </span>
+                        html += `
+                            <tr>
+                                <td>
+                                    <span class="device-name-badge">${instance.remark || instance.instance_name}</span>
+                                </td>
+                                <td>
+                                    <span class="status-badge ${statusClass}">
+                                        <i class="${statusIcon}"></i>
+                                        ${statusText}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="data-badge">
+                                        <i class="fas fa-arrow-down"></i>
+                                        ${formatBytes(instance.download_speed || 0)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="data-badge">
+                                        <i class="fas fa-arrow-up"></i>
+                                        ${formatBytes(instance.upload_speed || 0)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="data-badge">
+                                        <i class="fas fa-seedling"></i>
+                                        ${instance.total_torrents || 0}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="data-badge">
+                                        <i class="fas fa-play-circle"></i>
+                                        ${(instance.active_seeds || 0) + (instance.active_downloads || 0)}
+                                    </span>
+                                </td>
+                            </tr>
                         `;
                     }
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+            }
+
+            renderLuckyTable(luckyStatus) {
+                const container = document.getElementById('lucky-table-content');
+                let luckyDevices = [];
+                
+                // 处理Lucky设备
+                if (luckyStatus.devices && luckyStatus.devices.length > 0) {
+                    luckyStatus.devices.forEach(device => {
+                        if (device.success && device.services) {
+                            device.services.forEach(service => {
+                                luckyDevices.push({
+                                    device_name: device.device_name,
+                                    service_name: service.remark || '未命名服务',
+                                    service_type: service.service_type,
+                                    enabled: service.enabled,
+                                    connections: device.connections,
+                                    download_bytes: device.download_bytes || 0,
+                                    upload_bytes: device.upload_bytes || 0,
+                                    domains: service.domains,
+                                    locations: service.locations,
+                                    last_error: service.last_error,
+                                    cache_enabled: service.cache_enabled,
+                                    cache_size: service.cache_size,
+                                    cache_files: service.cache_files,
+                                    last_update: device.last_update
+                                });
+                            });
+                        }
+                    });
+                }
+                
+                if (luckyDevices.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <p>暂无Lucky设备数据</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = `
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 table-fixed">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">设备名称</th>
+                                    <th style="width: 15%;">状态控制</th>
+                                    <th style="width: 15%;">连接数</th>
+                                    <th style="width: 25%;">下行速度</th>
+                                    <th style="width: 25%;">上行速度</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                luckyDevices.forEach((device, index) => {
+                    // 格式化数据大小
+                    const formatBytes = (bytes) => {
+                        if (bytes === 0) return '0 B';
+                        const k = 1024;
+                        const sizes = ['B', 'KB', 'MB', 'GB'];
+                        const i = Math.floor(Math.log(bytes) / Math.log(k));
+                        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                    };
                     
                     html += `
                         <tr>
                             <td>
                                 <span class="device-name-badge">${device.service_name}</span>
-                            </td>
-                            <td>
-                                ${connectionStatusHtml}
                             </td>
                             <td>
                                 <div class="status-toggle">
@@ -922,18 +1016,6 @@
                                     ${formatBytes(device.upload_bytes)}
                                 </span>
                             </td>
-                            <td>
-                                <span class="data-badge">
-                                    <i class="fas fa-seedling"></i>
-                                    ${device.total_torrents || 0}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="data-badge">
-                                    <i class="fas fa-play-circle"></i>
-                                    ${(device.active_seeds || 0) + (device.active_downloads || 0)}
-                                </span>
-                            </td>
                         </tr>
                     `;
                 });
@@ -945,6 +1027,12 @@
                 `;
                 
                 container.innerHTML = html;
+            }
+
+            renderDevicesTable(luckyStatus, qbitStatus) {
+                // 分别渲染两个表格
+                this.renderQbitTable(qbitStatus);
+                this.renderLuckyTable(luckyStatus);
             }
 
             renderLuckyStatus(status) {
