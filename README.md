@@ -60,10 +60,8 @@
 
 ## 📚 文档导航
 
-- **[⚡ 更新指南](UPDATE_GUIDE.md)** - 如何在 Debian 上更新项目（推荐）
-- [🚀 部署指南](deploy_debian.sh) - 首次部署脚本
-- [📤 GitHub 推送指南](GITHUB_PUSH_GUIDE.md) - 如何推送到 GitHub
-- [📋 更新日志](CHANGELOG.md) - 版本更新记录
+- **[📖 完整手册](MANUAL.md)** - 包含所有配置、部署、维护和故障排除信息
+- [🚀 部署脚本](deploy_debian.sh) - 首次部署脚本
 
 ## 🚀 快速开始
 
@@ -162,7 +160,7 @@ cd ~/qbit-smart-controller
 ./reset.sh
 ```
 
-**详细说明请查看：[更新指南](UPDATE_GUIDE.md)**
+**详细说明请查看：[完整手册](MANUAL.md)**
 
 ## 📖 详细说明
 

@@ -111,7 +111,7 @@ class ConfigManager:
             "lucky_devices": [
                 {
                     "name": "我的Lucky设备",
-                    "api_url": "http://192.168.2.3:16601/api/webservice/rules?openToken=S9SXzQAAg03myzAfUsLkiQmTBUUUr3Yn",
+                    "api_url": "http://192.168.1.100:16601/api/webservice/rules?openToken=YOUR_LUCKY_OPEN_TOKEN_HERE",
                     "weight": 1.0,
                     "enabled": True,
                     "description": "主要监控设备"
@@ -120,7 +120,7 @@ class ConfigManager:
             "qbittorrent_instances": [
                 {
                     "name": "我的QB实例",
-                    "host": "http://192.168.2.21:8080",
+                    "host": "http://192.168.1.101:8080",
                     "username": "admin",
                     "password": "adminadmin",
                     "enabled": True,
@@ -177,29 +177,36 @@ class LuckyMonitor:
     async def get_session(self):
         """获取或创建 HTTP 会话（连接池复用）"""
         if self.session is None or self.session.closed:
-            # 配置连接池和超时
+            # 配置连接池和超时 - 增强连接韧性
             timeout = aiohttp.ClientTimeout(
-                total=15,           # 总超时
-                connect=5,          # 连接超时
-                sock_read=10        # 读取超时
+                total=20,           # 总超时增加到20秒
+                connect=8,          # 连接超时增加到8秒
+                sock_read=12,       # 读取超时增加到12秒
+                sock_connect=8      # 套接字连接超时
             )
             connector = aiohttp.TCPConnector(
                 verify_ssl=False,
-                limit=10,           # 连接池大小
-                limit_per_host=5,   # 每个主机的连接数
+                limit=15,           # 连接池大小增加到15
+                limit_per_host=8,   # 每个主机的连接数增加到8
                 ttl_dns_cache=300,  # DNS 缓存时间（秒）
                 force_close=False,  # 复用连接
-                enable_cleanup_closed=True
+                enable_cleanup_closed=True,
+                keepalive_timeout=60,  # Keep-Alive 超时
+                limit_per_host=8,
+                resolver=aiohttp.AsyncResolver(),  # 异步DNS解析器
+                family=0,  # 允许IPv4和IPv6
+                use_dns_cache=True
             )
             # 禁用代理，避免代理问题影响Lucky设备连接
             self.session = aiohttp.ClientSession(
                 timeout=timeout,
                 connector=connector,
                 raise_for_status=False,
-                trust_env=False  # 不信任环境变量中的代理设置
+                trust_env=False,  # 不信任环境变量中的代理设置
+                headers={'Connection': 'keep-alive', 'User-Agent': 'SpeedHiveHome/2.0'}
             )
             self._session_created = True
-            logger.debug("✅ Lucky Monitor HTTP 会话已创建（已禁用代理）")
+            logger.debug("✅ Lucky Monitor HTTP 会话已创建（已禁用代理，增强连接韧性）")
         return self.session
     
     async def test_connection(self, api_url: str):
@@ -240,54 +247,89 @@ class LuckyMonitor:
                 "message": f"连接失败: {str(e)}"
             }
     
-    async def get_device_connections(self, device_config: dict):
-        """获取Lucky设备连接数"""
-        try:
-            session = await self.get_session()
-            api_url = device_config["api_url"]
-            
-            print(f"🔍 采集Lucky数据: {device_config['name']}")
-            async with session.get(api_url) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    connections = self._parse_connections(data)
-                    weighted_connections = connections * device_config.get("weight", 1.0)
-                    
-                    print(f"📊 {device_config['name']} - 连接数: {connections}, 加权: {weighted_connections}")
-                    
-                    return {
-                        "success": True,
-                        "device_name": device_config["name"],
-                        "connections": connections,
-                        "weighted_connections": weighted_connections,
-                        "status": "online",
-                        "last_update": datetime.now().isoformat(),
-                        "raw_data": data
-                    }
+    async def get_device_connections(self, device_config: dict, max_retries: int = 3):
+        """获取Lucky设备连接数 - 带重试机制"""
+        for attempt in range(max_retries):
+            try:
+                session = await self.get_session()
+                api_url = device_config["api_url"]
+                
+                if attempt > 0:
+                    logger.info(f"🔄 {device_config['name']} - 重试采集数据 (尝试 {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(2 * attempt)  # 指数退避
                 else:
-                    error_msg = f"HTTP {response.status}"
-                    print(f"❌ {device_config['name']} - {error_msg}")
+                    print(f"🔍 采集Lucky数据: {device_config['name']}")
+                
+                async with session.get(api_url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        connections = self._parse_connections(data)
+                        weighted_connections = connections * device_config.get("weight", 1.0)
+                        
+                        print(f"📊 {device_config['name']} - 连接数: {connections}, 加权: {weighted_connections}")
+                        
+                        return {
+                            "success": True,
+                            "device_name": device_config["name"],
+                            "connections": connections,
+                            "weighted_connections": weighted_connections,
+                            "status": "online",
+                            "last_update": datetime.now().isoformat(),
+                            "raw_data": data,
+                            "attempt": attempt + 1
+                        }
+                    else:
+                        error_msg = f"HTTP {response.status}"
+                        if attempt == max_retries - 1:  # 最后一次尝试
+                            print(f"❌ {device_config['name']} - {error_msg} (已重试{max_retries}次)")
+                        return {
+                            "success": False,
+                            "device_name": device_config["name"],
+                            "connections": 0,
+                            "weighted_connections": 0,
+                            "status": "error",
+                            "error": error_msg,
+                            "last_update": datetime.now().isoformat(),
+                            "attempt": attempt + 1
+                        }
+            except (aiohttp.ClientConnectorError, aiohttp.ClientError, asyncio.TimeoutError, ConnectionResetError) as e:
+                error_msg = str(e)
+                error_type = type(e).__name__
+                
+                if attempt == max_retries - 1:  # 最后一次尝试
+                    logger.error(f"❌ {device_config['name']} - 采集异常 ({error_type}): {error_msg} (已重试{max_retries}次)")
                     return {
                         "success": False,
                         "device_name": device_config["name"],
                         "connections": 0,
                         "weighted_connections": 0,
                         "status": "error",
-                        "error": error_msg,
-                        "last_update": datetime.now().isoformat()
+                        "error": f"{error_type}: {error_msg}",
+                        "error_type": error_type,
+                        "last_update": datetime.now().isoformat(),
+                        "attempt": attempt + 1
                     }
-        except Exception as e:
-            error_msg = str(e)
-            print(f"❌ {device_config['name']} - 采集异常: {error_msg}")
-            return {
-                "success": False,
-                "device_name": device_config["name"],
-                "connections": 0,
-                "weighted_connections": 0,
-                "status": "error",
-                "error": error_msg,
-                "last_update": datetime.now().isoformat()
-            }
+                else:
+                    logger.warning(f"⚠️ {device_config['name']} - 连接错误 ({error_type}): {error_msg}, 将在 {2 * (attempt + 1)} 秒后重试")
+                    # 如果是连接重置错误，强制重新创建会话
+                    if "Connection reset" in error_msg or "104" in error_msg:
+                        logger.info(f"🔄 {device_config['name']} - 检测到连接重置，重新创建HTTP会话")
+                        await self.close()
+                        await asyncio.sleep(1)
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"❌ {device_config['name']} - 未知异常: {error_msg}")
+                return {
+                    "success": False,
+                    "device_name": device_config["name"],
+                    "connections": 0,
+                    "weighted_connections": 0,
+                    "status": "error",
+                    "error": error_msg,
+                    "error_type": "Unknown",
+                    "last_update": datetime.now().isoformat(),
+                    "attempt": attempt + 1
+                }
     
     def _parse_connections(self, data: dict) -> int:
         """解析Lucky API响应，提取连接数"""
@@ -737,27 +779,33 @@ class QBittorrentManager:
         """获取或创建 HTTP 会话（连接池复用）"""
         if self.session is None or self.session.closed:
             timeout = aiohttp.ClientTimeout(
-                total=10,
-                connect=5,
-                sock_read=8
+                total=15,           # 总超时增加到15秒
+                connect=8,          # 连接超时增加到8秒
+                sock_read=10,       # 读取超时增加到10秒
+                sock_connect=8      # 套接字连接超时
             )
             connector = aiohttp.TCPConnector(
                 verify_ssl=False,
-                limit=20,
-                limit_per_host=10,
+                limit=25,           # 连接池大小增加到25
+                limit_per_host=12,  # 每个主机的连接数增加到12
                 ttl_dns_cache=300,
                 force_close=False,
-                enable_cleanup_closed=True
+                enable_cleanup_closed=True,
+                keepalive_timeout=60,  # Keep-Alive 超时
+                resolver=aiohttp.AsyncResolver(),  # 异步DNS解析器
+                family=0,  # 允许IPv4和IPv6
+                use_dns_cache=True
             )
             # 禁用代理，避免代理问题影响qBittorrent连接
             self.session = aiohttp.ClientSession(
                 timeout=timeout,
                 connector=connector,
                 raise_for_status=False,
-                trust_env=False  # 不信任环境变量中的代理设置
+                trust_env=False,  # 不信任环境变量中的代理设置
+                headers={'Connection': 'keep-alive', 'User-Agent': 'SpeedHiveHome/2.0'}
             )
             self._session_created = True
-            logger.debug("✅ qBittorrent Manager HTTP 会话已创建（已禁用代理）")
+            logger.debug("✅ qBittorrent Manager HTTP 会话已创建（已禁用代理，增强连接韧性）")
         return self.session
     
     def _is_sid_valid(self, instance_key: str) -> bool:
@@ -967,214 +1015,259 @@ class QBittorrentManager:
                 "message": error_msg
             }
     
-    async def get_instance_status(self, instance_config: dict):
-        """获取qBittorrent实例状态"""
-        try:
-            logger.debug(f"🔍 采集QB状态: {instance_config['name']}")
-            
-            session = await self.get_session()
-            
-            # 使用缓存机制获取有效的 Cookie
-            cookies = await self.get_valid_cookies(instance_config)
-            if not cookies:
+    async def get_instance_status(self, instance_config: dict, max_retries: int = 3):
+        """获取qBittorrent实例状态 - 带重试机制"""
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    logger.info(f"🔄 {instance_config['name']} - 重试获取状态 (尝试 {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(2 * attempt)  # 指数退避
+                else:
+                    logger.debug(f"🔍 采集QB状态: {instance_config['name']}")
+                
+                session = await self.get_session()
+                
+                # 使用缓存机制获取有效的 Cookie
+                cookies = await self.get_valid_cookies(instance_config)
+                if not cookies:
+                    return {
+                        "success": False,
+                        "instance_name": instance_config["name"],
+                        "status": "offline",
+                        "error": "认证失败",
+                        "download_speed": 0,
+                        "upload_speed": 0,
+                        "active_downloads": 0,
+                        "active_seeds": 0,
+                        "total_torrents": 0,
+                        "last_update": datetime.now().isoformat(),
+                        "attempt": attempt + 1
+                    }
+                
+                # 获取传输信息 - 使用更长的超时时间
+                transfer_url = f"{instance_config['host']}/api/v2/transfer/info"
+                try:
+                    async with session.get(transfer_url, cookies=cookies, timeout=aiohttp.ClientTimeout(total=10)) as transfer_response:
+                        if transfer_response.status == 200:
+                            transfer_info = await transfer_response.json()
+                            
+                            # 获取种子列表
+                            torrents_url = f"{instance_config['host']}/api/v2/torrents/info"
+                            try:
+                                async with session.get(torrents_url, cookies=cookies, timeout=aiohttp.ClientTimeout(total=10)) as torrents_response:
+                                    torrents_info = await torrents_response.json() if torrents_response.status == 200 else []
+                            except Exception:
+                                # 种子列表获取失败，使用空列表
+                                torrents_info = []
+                            
+                            active_downloads = len([t for t in torrents_info if t.get("state") == "downloading"])
+                            active_seeds = len([t for t in torrents_info if t.get("state") == "uploading"])
+                            
+                            status_data = {
+                                "success": True,
+                                "instance_name": instance_config["name"],
+                                "status": "online",
+                                "download_speed": transfer_info.get("dl_info_speed", 0),
+                                "upload_speed": transfer_info.get("up_info_speed", 0),
+                                "active_downloads": active_downloads,
+                                "active_seeds": active_seeds,
+                                "total_torrents": len(torrents_info),
+                                "last_update": datetime.now().isoformat(),
+                                "attempt": attempt + 1
+                            }
+                            
+                            logger.debug(f"✅ {instance_config['name']} - 在线, 下载: {status_data['download_speed']} B/s, 上传: {status_data['upload_speed']} B/s")
+                            return status_data
+                        elif transfer_response.status == 403:
+                            # Cookie 过期，清除缓存和Cookie
+                            instance_key = f"{instance_config['host']}_{instance_config['username']}"
+                            if instance_key in self.cookies:
+                                del self.cookies[instance_key]
+                            if instance_key in self.sid_cache:
+                                del self.sid_cache[instance_key]
+                            logger.warning(f"⚠️ {instance_config['name']} - Cookie已过期，已清除缓存")
+                            return {
+                                "success": False,
+                                "instance_name": instance_config["name"],
+                                "status": "offline",
+                                "error": "认证过期",
+                                "download_speed": 0,
+                                "upload_speed": 0,
+                                "active_downloads": 0,
+                                "active_seeds": 0,
+                                "total_torrents": 0,
+                                "last_update": datetime.now().isoformat(),
+                                "attempt": attempt + 1
+                            }
+                        else:
+                            if attempt == max_retries - 1:
+                                logger.warning(f"⚠️ {instance_config['name']} - HTTP {transfer_response.status} (已重试{max_retries}次)")
+                            return {
+                                "success": False,
+                                "instance_name": instance_config["name"],
+                                "status": "offline",
+                                "error": f"服务异常 (HTTP {transfer_response.status})",
+                                "download_speed": 0,
+                                "upload_speed": 0,
+                                "active_downloads": 0,
+                                "active_seeds": 0,
+                                "total_torrents": 0,
+                                "last_update": datetime.now().isoformat(),
+                                "attempt": attempt + 1
+                            }
+                except (aiohttp.ClientConnectorError, aiohttp.ClientError, asyncio.TimeoutError, ConnectionResetError) as e:
+                    error_msg = str(e)
+                    error_type = type(e).__name__
+                    
+                    if attempt == max_retries - 1:
+                        logger.error(f"❌ {instance_config['name']} - 连接异常 ({error_type}): {error_msg} (已重试{max_retries}次)")
+                        return {
+                            "success": False,
+                            "instance_name": instance_config["name"],
+                            "status": "offline",
+                            "error": f"{error_type}: {error_msg}",
+                            "error_type": error_type,
+                            "download_speed": 0,
+                            "upload_speed": 0,
+                            "active_downloads": 0,
+                            "active_seeds": 0,
+                            "total_torrents": 0,
+                            "last_update": datetime.now().isoformat(),
+                            "attempt": attempt + 1
+                        }
+                    else:
+                        logger.warning(f"⚠️ {instance_config['name']} - 连接错误 ({error_type}): {error_msg}, 将在 {2 * (attempt + 1)} 秒后重试")
+                        # 如果是连接重置错误，清除认证缓存
+                        if "Connection reset" in error_msg or "104" in error_msg:
+                            logger.info(f"🔄 {instance_config['name']} - 检测到连接重置，清除认证缓存")
+                            instance_key = f"{instance_config['host']}_{instance_config['username']}"
+                            if instance_key in self.cookies:
+                                del self.cookies[instance_key]
+                            if instance_key in self.sid_cache:
+                                del self.sid_cache[instance_key]
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"❌ {instance_config['name']} - 未知异常: {error_msg}")
                 return {
                     "success": False,
                     "instance_name": instance_config["name"],
                     "status": "offline",
-                    "error": "认证失败",
+                    "error": error_msg,
+                    "error_type": "Unknown",
                     "download_speed": 0,
                     "upload_speed": 0,
                     "active_downloads": 0,
                     "active_seeds": 0,
                     "total_torrents": 0,
-                    "last_update": datetime.now().isoformat()
+                    "last_update": datetime.now().isoformat(),
+                    "attempt": attempt + 1
                 }
-            
-            # 获取传输信息 - 设置较短的超时时间
-            transfer_url = f"{instance_config['host']}/api/v2/transfer/info"
+    
+    async def set_speed_limits(self, instance_config: dict, download_limit: int, upload_limit: int, max_retries: int = 3) -> bool:
+        """设置速度限制（KB/s） - 带重试机制"""
+        for attempt in range(max_retries):
             try:
-                async with session.get(transfer_url, cookies=cookies, timeout=aiohttp.ClientTimeout(total=5)) as transfer_response:
-                    if transfer_response.status == 200:
-                        transfer_info = await transfer_response.json()
-                        
-                        # 获取种子列表
-                        torrents_url = f"{instance_config['host']}/api/v2/torrents/info"
-                        try:
-                            async with session.get(torrents_url, cookies=cookies, timeout=aiohttp.ClientTimeout(total=5)) as torrents_response:
-                                torrents_info = await torrents_response.json() if torrents_response.status == 200 else []
-                        except Exception:
-                            # 种子列表获取失败，使用空列表
-                            torrents_info = []
-                        
-                        active_downloads = len([t for t in torrents_info if t.get("state") == "downloading"])
-                        active_seeds = len([t for t in torrents_info if t.get("state") == "uploading"])
-                        
-                        status_data = {
-                            "success": True,
-                            "instance_name": instance_config["name"],
-                            "status": "online",
-                            "download_speed": transfer_info.get("dl_info_speed", 0),
-                            "upload_speed": transfer_info.get("up_info_speed", 0),
-                            "active_downloads": active_downloads,
-                            "active_seeds": active_seeds,
-                            "total_torrents": len(torrents_info),
-                            "last_update": datetime.now().isoformat()
-                        }
-                        
-                        logger.debug(f"✅ {instance_config['name']} - 在线, 下载: {status_data['download_speed']} B/s, 上传: {status_data['upload_speed']} B/s")
-                        return status_data
-                    elif transfer_response.status == 403:
-                        # Cookie 过期，清除缓存和Cookie
-                        instance_key = f"{instance_config['host']}_{instance_config['username']}"
+                if attempt > 0:
+                    logger.info(f"🔄 {instance_config['name']} - 重试设置速度限制 (尝试 {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(2 * attempt)  # 指数退避
+                else:
+                    logger.info(f"🎚️ 设置速度限制: {instance_config['name']} - 下载: {download_limit} KB/s, 上传: {upload_limit} KB/s")
+                
+                session = await self.get_session()
+                instance_key = f"{instance_config['host']}_{instance_config['username']}"
+                
+                # 使用缓存机制获取有效的 Cookie
+                cookies = await self.get_valid_cookies(instance_config)
+                if not cookies:
+                    logger.error(f"❌ {instance_config['name']} - 无法获取有效Cookie")
+                    return False
+                
+                # 设置全局下载限制
+                dl_limit_url = f"{instance_config['host']}/api/v2/transfer/setDownloadLimit"
+                dl_limit_data = {"limit": download_limit * 1024}  # 转换为 bytes/s
+                
+                dl_success = False
+                dl_error = ""
+                try:
+                    async with session.post(dl_limit_url, data=dl_limit_data, cookies=cookies, timeout=aiohttp.ClientTimeout(total=10)) as dl_response:
+                        dl_success = dl_response.status == 200
+                        if not dl_success:
+                            dl_error = f"HTTP {dl_response.status}"
+                            response_text = await dl_response.text()
+                            if attempt == max_retries - 1:
+                                logger.error(f"❌ {instance_config['name']} - 下载限制设置失败: {dl_error}, 响应: {response_text}")
+                except (aiohttp.ClientConnectorError, aiohttp.ClientError, asyncio.TimeoutError, ConnectionResetError) as e:
+                    dl_error = f"{type(e).__name__}: {str(e)}"
+                    if attempt == max_retries - 1:
+                        logger.error(f"❌ {instance_config['name']} - 下载限制请求异常: {e}")
+                except Exception as e:
+                    dl_error = f"请求异常: {str(e)}"
+                    if attempt == max_retries - 1:
+                        logger.error(f"❌ {instance_config['name']} - 下载限制请求异常: {e}")
+                
+                # 设置全局上传限制
+                up_limit_url = f"{instance_config['host']}/api/v2/transfer/setUploadLimit"
+                up_limit_data = {"limit": upload_limit * 1024}  # 转换为 bytes/s
+                
+                up_success = False
+                up_error = ""
+                try:
+                    async with session.post(up_limit_url, data=up_limit_data, cookies=cookies, timeout=aiohttp.ClientTimeout(total=10)) as up_response:
+                        up_success = up_response.status == 200
+                        if not up_success:
+                            up_error = f"HTTP {up_response.status}"
+                            response_text = await up_response.text()
+                            if attempt == max_retries - 1:
+                                logger.error(f"❌ {instance_config['name']} - 上传限制设置失败: {up_error}, 响应: {response_text}")
+                except (aiohttp.ClientConnectorError, aiohttp.ClientError, asyncio.TimeoutError, ConnectionResetError) as e:
+                    up_error = f"{type(e).__name__}: {str(e)}"
+                    if attempt == max_retries - 1:
+                        logger.error(f"❌ {instance_config['name']} - 上传限制请求异常: {e}")
+                except Exception as e:
+                    up_error = f"请求异常: {str(e)}"
+                    if attempt == max_retries - 1:
+                        logger.error(f"❌ {instance_config['name']} - 上传限制请求异常: {e}")
+                
+                success = dl_success and up_success
+                if success:
+                    logger.info(f"✅ {instance_config['name']} - 速度限制设置成功 (尝试 {attempt + 1})")
+                    return True
+                else:
+                    # 检查是否是连接重置错误
+                    if any("Connection reset" in err or "104" in err for err in [dl_error, up_error]):
+                        logger.warning(f"⚠️ {instance_config['name']} - 检测到连接重置，清除认证缓存")
+                        if instance_key in self.cookies:
+                            del self.cookies[instance_key]
+                        if instance_key in self.sid_cache:
+                            del self.sid_cache[instance_key]
+                    
+                    # 如果失败，可能是 Cookie 过期，清除缓存
+                    if any("403" in err for err in [dl_error, up_error]):
                         if instance_key in self.cookies:
                             del self.cookies[instance_key]
                         if instance_key in self.sid_cache:
                             del self.sid_cache[instance_key]
                         logger.warning(f"⚠️ {instance_config['name']} - Cookie已过期，已清除缓存")
-                        return {
-                            "success": False,
-                            "instance_name": instance_config["name"],
-                            "status": "offline",
-                            "error": "认证过期",
-                            "download_speed": 0,
-                            "upload_speed": 0,
-                            "active_downloads": 0,
-                            "active_seeds": 0,
-                            "total_torrents": 0,
-                            "last_update": datetime.now().isoformat()
-                        }
+                    
+                    if attempt == max_retries - 1:
+                        error_details = []
+                        if not dl_success:
+                            error_details.append(f"下载: {dl_error}")
+                        if not up_success:
+                            error_details.append(f"上传: {up_error}")
+                        logger.error(f"❌ {instance_config['name']} - 速度限制设置失败 (已重试{max_retries}次) - {', '.join(error_details)}")
                     else:
-                        logger.warning(f"⚠️ {instance_config['name']} - HTTP {transfer_response.status}")
-                        return {
-                            "success": False,
-                            "instance_name": instance_config["name"],
-                            "status": "offline",
-                            "error": f"服务异常 (HTTP {transfer_response.status})",
-                            "download_speed": 0,
-                            "upload_speed": 0,
-                            "active_downloads": 0,
-                            "active_seeds": 0,
-                            "total_torrents": 0,
-                            "last_update": datetime.now().isoformat()
-                        }
-            except asyncio.TimeoutError:
-                logger.warning(f"⚠️ {instance_config['name']} - 连接超时")
-                return {
-                    "success": False,
-                    "instance_name": instance_config["name"],
-                    "status": "offline",
-                    "error": "连接超时",
-                    "download_speed": 0,
-                    "upload_speed": 0,
-                    "active_downloads": 0,
-                    "active_seeds": 0,
-                    "total_torrents": 0,
-                    "last_update": datetime.now().isoformat()
-                }
-            except aiohttp.ClientConnectorError as e:
-                logger.warning(f"⚠️ {instance_config['name']} - 连接失败: {e}")
-                return {
-                    "success": False,
-                    "instance_name": instance_config["name"],
-                    "status": "offline",
-                    "error": "连接失败",
-                    "download_speed": 0,
-                    "upload_speed": 0,
-                    "active_downloads": 0,
-                    "active_seeds": 0,
-                    "total_torrents": 0,
-                    "last_update": datetime.now().isoformat()
-                }
-        except Exception as e:
-            error_msg = str(e)
-            logger.warning(f"⚠️ {instance_config['name']} - 采集异常: {error_msg}")
-            return {
-                "success": False,
-                "instance_name": instance_config["name"],
-                "status": "offline",
-                "error": "服务异常",
-                "download_speed": 0,
-                "upload_speed": 0,
-                "active_downloads": 0,
-                "active_seeds": 0,
-                "total_torrents": 0,
-                "last_update": datetime.now().isoformat()
-            }
-    
-    async def set_speed_limits(self, instance_config: dict, download_limit: int, upload_limit: int) -> bool:
-        """设置速度限制（KB/s）"""
-        try:
-            logger.info(f"🎚️ 设置速度限制: {instance_config['name']} - 下载: {download_limit} KB/s, 上传: {upload_limit} KB/s")
-            
-            session = await self.get_session()
-            instance_key = f"{instance_config['host']}_{instance_config['username']}"
-            
-            # 使用缓存机制获取有效的 Cookie
-            cookies = await self.get_valid_cookies(instance_config)
-            if not cookies:
-                logger.error(f"❌ {instance_config['name']} - 无法获取有效Cookie")
-                return False
-            
-            # 设置全局下载限制
-            dl_limit_url = f"{instance_config['host']}/api/v2/transfer/setDownloadLimit"
-            dl_limit_data = {"limit": download_limit * 1024}  # 转换为 bytes/s
-            
-            dl_success = False
-            dl_error = ""
-            try:
-                async with session.post(dl_limit_url, data=dl_limit_data, cookies=cookies) as dl_response:
-                    dl_success = dl_response.status == 200
-                    if not dl_success:
-                        dl_error = f"HTTP {dl_response.status}"
-                        response_text = await dl_response.text()
-                        logger.error(f"❌ {instance_config['name']} - 下载限制设置失败: {dl_error}, 响应: {response_text}")
+                        logger.warning(f"⚠️ {instance_config['name']} - 速度限制设置失败，将在 {2 * (attempt + 1)} 秒后重试")
+                        
             except Exception as e:
-                dl_error = f"请求异常: {str(e)}"
-                logger.error(f"❌ {instance_config['name']} - 下载限制请求异常: {e}")
-            
-            # 设置全局上传限制
-            up_limit_url = f"{instance_config['host']}/api/v2/transfer/setUploadLimit"
-            up_limit_data = {"limit": upload_limit * 1024}  # 转换为 bytes/s
-            
-            up_success = False
-            up_error = ""
-            try:
-                async with session.post(up_limit_url, data=up_limit_data, cookies=cookies) as up_response:
-                    up_success = up_response.status == 200
-                    if not up_success:
-                        up_error = f"HTTP {up_response.status}"
-                        response_text = await up_response.text()
-                        logger.error(f"❌ {instance_config['name']} - 上传限制设置失败: {up_error}, 响应: {response_text}")
-            except Exception as e:
-                up_error = f"请求异常: {str(e)}"
-                logger.error(f"❌ {instance_config['name']} - 上传限制请求异常: {e}")
-            
-            success = dl_success and up_success
-            if success:
-                logger.info(f"✅ {instance_config['name']} - 速度限制设置成功")
-            else:
-                error_details = []
-                if not dl_success:
-                    error_details.append(f"下载: {dl_error}")
-                if not up_success:
-                    error_details.append(f"上传: {up_error}")
-                
-                logger.error(f"❌ {instance_config['name']} - 速度限制设置失败 - {', '.join(error_details)}")
-                
-                # 如果失败，可能是 Cookie 过期，清除缓存
-                if "403" in dl_error or "403" in up_error:
-                    if instance_key in self.cookies:
-                        del self.cookies[instance_key]
-                    if instance_key in self.sid_cache:
-                        del self.sid_cache[instance_key]
-                    logger.warning(f"⚠️ {instance_config['name']} - Cookie已过期，已清除缓存")
-            
-            return success
-        except Exception as e:
-            logger.error(f"❌ {instance_config['name']} - 设置速度限制异常: {e}")
-            import traceback
-            logger.error(f"❌ 异常详情: {traceback.format_exc()}")
-            return False
+                if attempt == max_retries - 1:
+                    logger.error(f"❌ {instance_config['name']} - 设置速度限制异常: {e}")
+                    import traceback
+                    logger.error(f"❌ 异常详情: {traceback.format_exc()}")
+                else:
+                    logger.warning(f"⚠️ {instance_config['name']} - 设置速度限制异常，将在 {2 * (attempt + 1)} 秒后重试: {e}")
+        
+        return False
     
     async def close(self):
         """关闭会话并释放资源"""
@@ -1629,6 +1722,119 @@ async def get_failed_instances():
     except Exception as e:
         logger.error(f"获取失败记录异常: {e}")
         raise HTTPException(status_code=500, detail=f"获取失败记录失败: {str(e)}")
+
+@app.post("/api/controller/reset-connections")
+async def reset_all_connections():
+    """重置所有连接会话 - 解决连接重置问题"""
+    try:
+        logger.info("🔄 开始重置所有连接会话...")
+        
+        # 重置 Lucky Monitor 会话
+        await lucky_monitor.close()
+        logger.info("✅ Lucky Monitor 会话已重置")
+        
+        # 重置 qBittorrent Manager 会话
+        await qbit_manager.close()
+        logger.info("✅ qBittorrent Manager 会话已重置")
+        
+        # 清除所有认证缓存
+        qbit_manager.cookies.clear()
+        qbit_manager.sid_cache.clear()
+        logger.info("✅ 认证缓存已清除")
+        
+        return {
+            "message": "所有连接会话已重置",
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "actions": [
+                "Lucky Monitor 会话已重置",
+                "qBittorrent Manager 会话已重置", 
+                "认证缓存已清除"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"重置连接会话异常: {e}")
+        raise HTTPException(status_code=500, detail=f"重置连接失败: {str(e)}")
+
+@app.get("/api/controller/connection-health")
+async def get_connection_health():
+    """获取连接健康状态"""
+    try:
+        config = config_manager.load_config()
+        
+        # 检查 Lucky 设备连接
+        lucky_devices = config.get("lucky_devices", [])
+        lucky_health = []
+        for device in lucky_devices:
+            if device.get("enabled", True):
+                try:
+                    result = await lucky_monitor.test_connection(device["api_url"])
+                    lucky_health.append({
+                        "device_name": device["name"],
+                        "status": "healthy" if result.get("success") else "unhealthy",
+                        "details": result
+                    })
+                except Exception as e:
+                    lucky_health.append({
+                        "device_name": device["name"],
+                        "status": "error",
+                        "details": {"error": str(e)}
+                    })
+        
+        # 检查 qBittorrent 实例连接
+        qbit_instances = config.get("qbittorrent_instances", [])
+        qbit_health = []
+        for instance in qbit_instances:
+            if instance.get("enabled", True):
+                try:
+                    result = await qbit_manager.test_connection(instance)
+                    qbit_health.append({
+                        "instance_name": instance["name"],
+                        "status": "healthy" if result.get("success") else "unhealthy",
+                        "details": result
+                    })
+                except Exception as e:
+                    qbit_health.append({
+                        "instance_name": instance["name"],
+                        "status": "error",
+                        "details": {"error": str(e)}
+                    })
+        
+        # 统计连接状态
+        total_lucky = len(lucky_health)
+        healthy_lucky = len([h for h in lucky_health if h["status"] == "healthy"])
+        total_qbit = len(qbit_health)
+        healthy_qbit = len([h for h in qbit_health if h["status"] == "healthy"])
+        
+        overall_status = "healthy" if (healthy_lucky == total_lucky and healthy_qbit == total_qbit) else "degraded"
+        
+        return {
+            "overall_status": overall_status,
+            "timestamp": datetime.now().isoformat(),
+            "lucky_devices": {
+                "total": total_lucky,
+                "healthy": healthy_lucky,
+                "unhealthy": total_lucky - healthy_lucky,
+                "details": lucky_health
+            },
+            "qbittorrent_instances": {
+                "total": total_qbit,
+                "healthy": healthy_qbit,
+                "unhealthy": total_qbit - healthy_qbit,
+                "details": qbit_health
+            },
+            "connection_pools": {
+                "lucky_session_active": lucky_monitor.session is not None and not lucky_monitor.session.closed,
+                "qbit_session_active": qbit_manager.session is not None and not qbit_manager.session.closed,
+                "qbit_cookies_cached": len(qbit_manager.cookies),
+                "qbit_sid_cached": len(qbit_manager.sid_cache)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"获取连接健康状态异常: {e}")
+        raise HTTPException(status_code=500, detail=f"获取连接健康状态失败: {str(e)}")
 
 @app.get("/health")
 async def health_check():
