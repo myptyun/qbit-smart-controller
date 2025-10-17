@@ -937,14 +937,20 @@
                         if (device.success && device.raw_data) {
                             // 使用正确的字段名：ruleList
                             let proxyList = device.raw_data.ruleList;
+                            let statistics = device.raw_data.statistics || {};
                             
                             console.log('RuleList found:', proxyList);
+                            console.log('Statistics found:', statistics);
                             
                             if (Array.isArray(proxyList)) {
                                 proxyList.forEach(proxy => {
                                     console.log('Processing proxy:', proxy);
                                     // 只显示启用的服务
                                     if (proxy.Enable && proxy.DisplayInFrontendList) {
+                                        // 从statistics中获取该服务的连接和速度信息
+                                        const proxyKey = proxy.Key;
+                                        const stats = statistics[proxyKey] || {};
+                                        
                                         proxyServices.push({
                                             device_name: device.device_name,
                                             service_name: proxy.Remark || '未命名服务',
@@ -953,16 +959,12 @@
                                             key: proxy.Key,
                                             locations: proxy.Locations || [],
                                             domains: proxy.Domains || [],
-                                            last_error: proxy.LastErrMsg || '',
-                                            cache_enabled: proxy.CacheEnabled || false,
-                                            cache_size: proxy.CaCheTotalSize || 0,
-                                            cache_files: proxy.CacheFilesTotal || 0,
-                                            safe_ip_mode: proxy.SafeIPMode || '',
-                                            safe_user_agent_mode: proxy.SafeUserAgentMode || '',
-                                            basic_auth_enabled: proxy.EnableBasicAuth || false,
-                                            basic_auth_users: proxy.BasicAuthUserList || '',
-                                            custom_output: proxy.CustomOutputText || '',
-                                            coraza_waf: proxy.CorazaWAF || false,
+                                            // 从statistics获取连接数和速度
+                                            connections: stats.Connections || stats.connections || 0,
+                                            download_speed: stats.DownloadSpeed || stats.downloadSpeed || 0,
+                                            upload_speed: stats.UploadSpeed || stats.uploadSpeed || 0,
+                                            download_bytes: stats.DownloadBytes || stats.downloadBytes || 0,
+                                            upload_bytes: stats.UploadBytes || stats.uploadBytes || 0,
                                             last_update: device.last_update
                                         });
                                     }
@@ -1000,11 +1002,13 @@
                         <table class="table table-hover mb-0 table-fixed">
                             <thead>
                                 <tr>
-                                    <th style="width: 20%;">服务名称</th>
-                                    <th style="width: 15%;">状态控制</th>
-                                    <th style="width: 15%;">服务类型</th>
-                                    <th style="width: 25%;">目标地址</th>
-                                    <th style="width: 25%;">域名</th>
+                                    <th style="width: 18%;">服务名称</th>
+                                    <th style="width: 10%;">状态控制</th>
+                                    <th style="width: 10%;">连接数</th>
+                                    <th style="width: 13%;">下行速度</th>
+                                    <th style="width: 13%;">上行速度</th>
+                                    <th style="width: 18%;">目标地址</th>
+                                    <th style="width: 18%;">域名</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1042,15 +1046,27 @@
                             </td>
                             <td>
                                 <div class="status-toggle">
-                                    <div class="toggle-switch ${service.enabled ? 'active' : ''}" onclick="toggleDeviceControl(${index})" title="控制该服务是否参与qB限速逻辑">
+                                    <div class="toggle-switch ${service.enabled ? 'active' : ''}" onclick="toggleLuckyServiceControl('${service.key}')" title="控制该服务是否参与qB限速逻辑">
                                     </div>
-                                    <span class="small">${service.enabled ? '开' : '关'}</span>
+                                    <span class="small">${service.enabled ? '启用' : '禁用'}</span>
                                 </div>
                             </td>
                             <td>
+                                <span class="data-badge ${service.connections > 0 ? 'badge-success' : ''}">
+                                    <i class="fas fa-link"></i>
+                                    ${service.connections}
+                                </span>
+                            </td>
+                            <td>
                                 <span class="data-badge">
-                                    <i class="${getServiceIcon(service.service_type)}"></i>
-                                    ${service.service_type}
+                                    <i class="fas fa-download"></i>
+                                    ${this.formatSpeed(service.download_speed)}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="data-badge">
+                                    <i class="fas fa-upload"></i>
+                                    ${this.formatSpeed(service.upload_speed)}
                                 </span>
                             </td>
                             <td>
@@ -1740,6 +1756,21 @@
             
             // 这里可以添加API调用来保存控制状态
             // 例如: await fetch('/api/device/control', { method: 'POST', body: JSON.stringify({index, enabled: isActive}) });
+        }
+
+        function toggleLuckyServiceControl(serviceKey) {
+            // 控制Lucky服务是否参与qB限速逻辑
+            window.dashboard.addLog(`Lucky服务控制状态已切换 (Key: ${serviceKey})`, 'info');
+            
+            // 更新开关状态
+            const toggleSwitch = event.target;
+            toggleSwitch.classList.toggle('active');
+            const statusText = toggleSwitch.nextElementSibling;
+            const isActive = toggleSwitch.classList.contains('active');
+            statusText.textContent = isActive ? '启用' : '禁用';
+            
+            // 这里可以添加API调用来保存Lucky服务的控制状态
+            // 例如: await fetch('/api/lucky/service/control', { method: 'POST', body: JSON.stringify({key: serviceKey, enabled: isActive}) });
         }
 
         function toggleDeviceStatus(index) {
