@@ -1091,6 +1091,7 @@ class QBittorrentManager:
                         "active_downloads": 0,
                         "active_seeds": 0,
                         "total_torrents": 0,
+                        "connection_status": "disconnected",
                         "last_update": datetime.now().isoformat(),
                         "attempt": attempt + 1
                     }
@@ -1123,6 +1124,7 @@ class QBittorrentManager:
                                 "active_downloads": active_downloads,
                                 "active_seeds": active_seeds,
                                 "total_torrents": len(torrents_info),
+                                "connection_status": transfer_info.get("connection_status", "unknown"),
                                 "last_update": datetime.now().isoformat(),
                                 "attempt": attempt + 1
                             }
@@ -1147,6 +1149,7 @@ class QBittorrentManager:
                                 "active_downloads": 0,
                                 "active_seeds": 0,
                                 "total_torrents": 0,
+                                "connection_status": "disconnected",
                                 "last_update": datetime.now().isoformat(),
                                 "attempt": attempt + 1
                             }
@@ -1163,6 +1166,7 @@ class QBittorrentManager:
                                 "active_downloads": 0,
                                 "active_seeds": 0,
                                 "total_torrents": 0,
+                                "connection_status": "disconnected",
                                 "last_update": datetime.now().isoformat(),
                                 "attempt": attempt + 1
                             }
@@ -1183,6 +1187,7 @@ class QBittorrentManager:
                             "active_downloads": 0,
                             "active_seeds": 0,
                             "total_torrents": 0,
+                            "connection_status": "disconnected",
                             "last_update": datetime.now().isoformat(),
                             "attempt": attempt + 1
                         }
@@ -1210,6 +1215,7 @@ class QBittorrentManager:
                     "active_downloads": 0,
                     "active_seeds": 0,
                     "total_torrents": 0,
+                    "connection_status": "disconnected",
                     "last_update": datetime.now().isoformat(),
                     "attempt": attempt + 1
                 }
