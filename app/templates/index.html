@@ -923,39 +923,46 @@
 
             renderLuckyTable(luckyStatus) {
                 const container = document.getElementById('lucky-table-content');
-                let luckyDevices = [];
+                let proxyServices = [];
                 
-                // 处理Lucky设备
+                // 处理Lucky设备，提取ProxyList中的详细服务信息
                 if (luckyStatus.devices && luckyStatus.devices.length > 0) {
                     luckyStatus.devices.forEach(device => {
-                        if (device.success && device.services) {
-                            device.services.forEach(service => {
-                                luckyDevices.push({
-                                    device_name: device.device_name,
-                                    service_name: service.remark || '未命名服务',
-                                    service_type: service.service_type,
-                                    enabled: service.enabled,
-                                    connections: device.connections,
-                                    download_bytes: device.download_bytes || 0,
-                                    upload_bytes: device.upload_bytes || 0,
-                                    domains: service.domains,
-                                    locations: service.locations,
-                                    last_error: service.last_error,
-                                    cache_enabled: service.cache_enabled,
-                                    cache_size: service.cache_size,
-                                    cache_files: service.cache_files,
-                                    last_update: device.last_update
-                                });
+                        if (device.success && device.raw_data && device.raw_data.ProxyList) {
+                            device.raw_data.ProxyList.forEach(proxy => {
+                                // 只显示启用的服务
+                                if (proxy.Enable && proxy.DisplayInFrontendList) {
+                                    proxyServices.push({
+                                        device_name: device.device_name,
+                                        service_name: proxy.Remark || '未命名服务',
+                                        service_type: proxy.WebServiceType || 'unknown',
+                                        enabled: proxy.Enable,
+                                        key: proxy.Key,
+                                        locations: proxy.Locations || [],
+                                        domains: proxy.Domains || [],
+                                        last_error: proxy.LastErrMsg || '',
+                                        cache_enabled: proxy.CacheEnabled || false,
+                                        cache_size: proxy.CaCheTotalSize || 0,
+                                        cache_files: proxy.CacheFilesTotal || 0,
+                                        safe_ip_mode: proxy.SafeIPMode || '',
+                                        safe_user_agent_mode: proxy.SafeUserAgentMode || '',
+                                        basic_auth_enabled: proxy.EnableBasicAuth || false,
+                                        basic_auth_users: proxy.BasicAuthUserList || '',
+                                        custom_output: proxy.CustomOutputText || '',
+                                        coraza_waf: proxy.CorazaWAF || false,
+                                        last_update: device.last_update
+                                    });
+                                }
                             });
                         }
                     });
                 }
                 
-                if (luckyDevices.length === 0) {
+                if (proxyServices.length === 0) {
                     container.innerHTML = `
                         <div class="text-center py-4 text-muted">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                            <p>暂无Lucky设备数据</p>
+                            <p>暂无Lucky代理服务数据</p>
                         </div>
                     `;
                     return;
@@ -966,54 +973,69 @@
                         <table class="table table-hover mb-0 table-fixed">
                             <thead>
                                 <tr>
-                                    <th style="width: 20%;">设备名称</th>
+                                    <th style="width: 20%;">服务名称</th>
                                     <th style="width: 15%;">状态控制</th>
-                                    <th style="width: 15%;">连接数</th>
-                                    <th style="width: 25%;">下行速度</th>
-                                    <th style="width: 25%;">上行速度</th>
+                                    <th style="width: 15%;">服务类型</th>
+                                    <th style="width: 25%;">目标地址</th>
+                                    <th style="width: 25%;">域名</th>
                                 </tr>
                             </thead>
                             <tbody>
                 `;
                 
-                luckyDevices.forEach((device, index) => {
-                    // 格式化数据大小
-                    const formatBytes = (bytes) => {
-                        if (bytes === 0) return '0 B';
-                        const k = 1024;
-                        const sizes = ['B', 'KB', 'MB', 'GB'];
-                        const i = Math.floor(Math.log(bytes) / Math.log(k));
-                        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                proxyServices.forEach((service, index) => {
+                    // 格式化地址显示
+                    const formatLocations = (locations) => {
+                        if (!locations || locations.length === 0) return '无';
+                        return locations.slice(0, 2).join(', ') + (locations.length > 2 ? '...' : '');
+                    };
+                    
+                    // 格式化域名显示
+                    const formatDomains = (domains) => {
+                        if (!domains || domains.length === 0) return '无';
+                        return domains.slice(0, 2).join(', ') + (domains.length > 2 ? '...' : '');
+                    };
+                    
+                    // 获取服务类型图标
+                    const getServiceIcon = (serviceType) => {
+                        switch (serviceType) {
+                            case 'reverseproxy': return 'fas fa-exchange-alt';
+                            case 'fileserver': return 'fas fa-folder-open';
+                            case 'tcp': return 'fas fa-plug';
+                            case 'udp': return 'fas fa-broadcast-tower';
+                            default: return 'fas fa-cog';
+                        }
                     };
                     
                     html += `
                         <tr>
                             <td>
-                                <span class="device-name-badge">${device.service_name}</span>
+                                <span class="device-name-badge">${service.service_name}</span>
+                                <br><small class="text-muted">${service.device_name}</small>
                             </td>
                             <td>
                                 <div class="status-toggle">
-                                    <div class="toggle-switch ${device.enabled ? 'active' : ''}" onclick="toggleDeviceControl(${index})" title="控制该设备是否参与qB限速逻辑">
+                                    <div class="toggle-switch ${service.enabled ? 'active' : ''}" onclick="toggleDeviceControl(${index})" title="控制该服务是否参与qB限速逻辑">
                                     </div>
-                                    <span class="small">${device.enabled ? '开' : '关'}</span>
+                                    <span class="small">${service.enabled ? '开' : '关'}</span>
                                 </div>
                             </td>
                             <td>
                                 <span class="data-badge">
-                                    <i class="fas fa-link"></i>
-                                    ${device.connections}
+                                    <i class="${getServiceIcon(service.service_type)}"></i>
+                                    ${service.service_type}
                                 </span>
                             </td>
                             <td>
-                                <span class="data-badge">
-                                    <i class="fas fa-arrow-down"></i>
-                                    ${formatBytes(device.download_bytes)}
+                                <span class="data-badge" title="${service.locations.join(', ')}">
+                                    <i class="fas fa-server"></i>
+                                    ${formatLocations(service.locations)}
                                 </span>
                             </td>
                             <td>
-                                <span class="data-badge">
-                                    <i class="fas fa-arrow-up"></i>
-                                    ${formatBytes(device.upload_bytes)}
+                                <span class="data-badge" title="${service.domains.join(', ')}">
+                                    <i class="fas fa-globe"></i>
+                                    ${formatDomains(service.domains)}
                                 </span>
                             </td>
                         </tr>
