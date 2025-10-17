@@ -195,6 +195,77 @@
             align-items: center;
             gap: 0.25rem;
         }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid;
+        }
+        
+        .status-online {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border-color: rgba(40, 167, 69, 0.3);
+        }
+        
+        .status-warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border-color: rgba(255, 193, 7, 0.3);
+        }
+        
+        .status-offline {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border-color: rgba(220, 53, 69, 0.3);
+        }
+        
+        .status-unknown {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+            border-color: rgba(108, 117, 125, 0.3);
+        }
+        
+        /* 固定表格列宽样式 */
+        .table-fixed {
+            table-layout: fixed;
+            width: 100%;
+        }
+        
+        .table-fixed th,
+        .table-fixed td {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0.5rem;
+        }
+        
+        /* 设备名称列允许换行 */
+        .table-fixed td:first-child {
+            white-space: normal;
+            word-break: break-word;
+        }
+        
+        /* 数据徽章样式优化 */
+        .table-fixed .data-badge {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* 状态徽章样式优化 */
+        .table-fixed .status-badge {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .url-badge {
             background-color: #007bff;
             color: white;
@@ -718,6 +789,10 @@
                                 connections: 0,
                                 download_bytes: instance.download_speed || 0,
                                 upload_bytes: instance.upload_speed || 0,
+                                total_torrents: instance.total_torrents || 0, // 做种总数
+                                active_seeds: instance.active_seeds || 0, // 活动做种数
+                                active_downloads: instance.active_downloads || 0, // 活动下载数
+                                connection_status: instance.connection_status || 'unknown', // 连接状态
                                 domains: [],
                                 locations: [instance.host],
                                 last_error: instance.error || '',
@@ -742,14 +817,17 @@
                 
                 let html = `
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0 table-fixed">
                             <thead>
                                 <tr>
-                                    <th>设备名称</th>
-                                    <th>状态控制</th>
-                                    <th>连接数</th>
-                                    <th>下载数据</th>
-                                    <th>上传数据</th>
+                                    <th style="width: 15%;">设备名称</th>
+                                    <th style="width: 12%;">连接状态</th>
+                                    <th style="width: 12%;">状态控制</th>
+                                    <th style="width: 10%;">连接数</th>
+                                    <th style="width: 12%;">下载数据</th>
+                                    <th style="width: 12%;">上传数据</th>
+                                    <th style="width: 10%;">做种总数</th>
+                                    <th style="width: 10%;">活动数量</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -765,10 +843,59 @@
                         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
                     };
                     
+                    // 获取连接状态显示
+                    let connectionStatusHtml = '';
+                    if (device.type === 'qbit') {
+                        const status = device.connection_status || 'unknown';
+                        let statusClass = '';
+                        let statusIcon = '';
+                        let statusText = '';
+                        
+                        switch (status) {
+                            case 'connected':
+                                statusClass = 'status-online';
+                                statusIcon = 'fas fa-check-circle';
+                                statusText = '已连接';
+                                break;
+                            case 'firewalled':
+                                statusClass = 'status-warning';
+                                statusIcon = 'fas fa-shield-alt';
+                                statusText = '防火墙';
+                                break;
+                            case 'disconnected':
+                                statusClass = 'status-offline';
+                                statusIcon = 'fas fa-times-circle';
+                                statusText = '未连接';
+                                break;
+                            default:
+                                statusClass = 'status-unknown';
+                                statusIcon = 'fas fa-question-circle';
+                                statusText = '未知';
+                        }
+                        
+                        connectionStatusHtml = `
+                            <span class="status-badge ${statusClass}">
+                                <i class="${statusIcon}"></i>
+                                ${statusText}
+                            </span>
+                        `;
+                    } else {
+                        // Lucky设备显示在线状态
+                        connectionStatusHtml = `
+                            <span class="status-badge ${device.enabled ? 'status-online' : 'status-offline'}">
+                                <i class="fas fa-${device.enabled ? 'check-circle' : 'times-circle'}"></i>
+                                ${device.enabled ? '在线' : '离线'}
+                            </span>
+                        `;
+                    }
+                    
                     html += `
                         <tr>
                             <td>
                                 <span class="device-name-badge">${device.service_name}</span>
+                            </td>
+                            <td>
+                                ${connectionStatusHtml}
                             </td>
                             <td>
                                 <div class="status-toggle">
@@ -793,6 +920,18 @@
                                 <span class="data-badge">
                                     <i class="fas fa-arrow-up"></i>
                                     ${formatBytes(device.upload_bytes)}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="data-badge">
+                                    <i class="fas fa-seedling"></i>
+                                    ${device.total_torrents || 0}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="data-badge">
+                                    <i class="fas fa-play-circle"></i>
+                                    ${(device.active_seeds || 0) + (device.active_downloads || 0)}
                                 </span>
                             </td>
                         </tr>
