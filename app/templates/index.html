@@ -935,14 +935,10 @@
                         console.log('Device raw_data:', device.raw_data);
                         
                         if (device.success && device.raw_data) {
-                            // 检查不同的可能字段名
-                            let proxyList = device.raw_data.ProxyList || 
-                                          device.raw_data.proxyList || 
-                                          device.raw_data.ruleList ||
-                                          device.raw_data.rules ||
-                                          device.raw_data;
+                            // 使用正确的字段名：ruleList
+                            let proxyList = device.raw_data.ruleList;
                             
-                            console.log('ProxyList found:', proxyList);
+                            console.log('RuleList found:', proxyList);
                             
                             if (Array.isArray(proxyList)) {
                                 proxyList.forEach(proxy => {
