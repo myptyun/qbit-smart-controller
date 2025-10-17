@@ -75,14 +75,15 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-### 2. 部署项目
+### 2. 选择部署方式
 
+#### 方式一：标准部署（推荐新用户）
 ```bash
 # 下载项目
 git clone <repository-url>
 cd qbit-smart-controller
 
-# 运行部署脚本
+# 运行标准部署脚本
 chmod +x deploy.sh
 ./deploy.sh init
 
@@ -93,9 +94,53 @@ sudo nano /opt/qbit-smart-controller/config/config.yaml
 ./deploy.sh restart
 ```
 
+#### 方式二：自定义路径 Docker Compose
+```bash
+# 下载项目
+git clone <repository-url>
+cd qbit-smart-controller
+
+# 运行自定义路径部署脚本
+chmod +x deploy_custom_path.sh
+./deploy_custom_path.sh init
+
+# 编辑配置（使用您的自定义路径）
+nano /home/myptyun/config/config.yaml
+
+# 重启服务
+./deploy_custom_path.sh restart
+```
+
+#### 方式三：自定义路径 Docker 命令
+```bash
+# 下载项目
+git clone <repository-url>
+cd qbit-smart-controller
+
+# 运行 Docker 命令部署脚本
+chmod +x deploy_docker_cmd.sh
+./deploy_docker_cmd.sh init
+
+# 编辑配置
+nano /home/myptyun/config/config.yaml
+
+# 重启服务
+./deploy_docker_cmd.sh restart
+```
+
 ### 3. 访问界面
 
 打开浏览器访问：`http://localhost:5000`
+
+### 📋 部署方式对比
+
+| 特性 | 标准部署 | 自定义路径 Docker Compose | 自定义路径 Docker 命令 |
+|------|----------|---------------------------|------------------------|
+| **配置文件路径** | `/opt/qbit-smart-controller/config/` | `/home/myptyun/config/` | `/home/myptyun/config/` |
+| **数据目录路径** | `/opt/qbit-smart-controller/data/` | `/home/myptyun/data/` | `/home/myptyun/data/` |
+| **管理方式** | Docker Compose | Docker Compose | 直接 Docker 命令 |
+| **适用场景** | 新用户、标准环境 | 需要自定义路径 | 熟悉 Docker 命令的用户 |
+| **脚本文件** | `deploy.sh` | `deploy_custom_path.sh` | `deploy_docker_cmd.sh` |
 
 ---
 
@@ -164,9 +209,30 @@ web_settings:
 
 ## 🐳 部署指南
 
-### Docker 部署
+### 部署方式选择
 
-#### 1. 目录结构
+本项目提供三种部署方式，您可以根据需要选择：
+
+1. **标准部署** (`deploy.sh`) - 使用默认路径 `/opt/qbit-smart-controller/`
+2. **自定义路径 Docker Compose** (`deploy_custom_path.sh`) - 支持自定义配置文件和数据目录路径
+3. **自定义路径 Docker 命令** (`deploy_docker_cmd.sh`) - 直接使用 Docker 命令，类似传统部署方式
+
+### 方式一：标准部署（推荐新用户）
+
+使用默认路径部署，适合大多数用户：
+
+```bash
+# 初始化部署
+./deploy.sh init
+
+# 编辑配置
+sudo nano /opt/qbit-smart-controller/config/config.yaml
+
+# 重启服务
+./deploy.sh restart
+```
+
+**目录结构**：
 ```
 /opt/qbit-smart-controller/
 ├── config/
@@ -179,14 +245,72 @@ web_settings:
 └── Dockerfile                   # 镜像构建
 ```
 
-#### 2. 卷映射配置
+### 方式二：自定义路径 Docker Compose
+
+如果您需要将配置文件和数据目录放在特定位置（如 `/home/username/config` 和 `/home/username/data`）：
+
+```bash
+# 初始化部署
+./deploy_custom_path.sh init
+
+# 编辑配置（使用您的自定义路径）
+nano /home/myptyun/config/config.yaml
+
+# 重启服务
+./deploy_custom_path.sh restart
+```
+
+**特点**：
+- ✅ 支持自定义配置文件和数据目录路径
+- ✅ 自动创建目录和配置文件
+- ✅ 完整的权限管理
+- ✅ 使用 Docker Compose 管理
+
+### 方式三：自定义路径 Docker 命令
+
+如果您习惯使用传统的 `docker run` 命令部署：
+
+```bash
+# 初始化部署
+./deploy_docker_cmd.sh init
+
+# 编辑配置
+nano /home/myptyun/config/config.yaml
+
+# 重启服务
+./deploy_docker_cmd.sh restart
+```
+
+**特点**：
+- ✅ 直接使用 Docker 命令，类似传统部署
+- ✅ 支持自定义路径
+- ✅ 更轻量级，适合熟悉 Docker 的用户
+- ✅ 完全控制容器参数
+
+### 卷映射配置
+
+#### 标准部署
 ```yaml
 volumes:
   - ./config:/app/config:ro      # 配置文件（只读）
   - ./data:/app/data             # 数据目录（读写）
 ```
 
-#### 3. 网络配置
+#### 自定义路径部署
+```bash
+# Docker Compose 方式
+volumes:
+  - /home/myptyun/config:/app/config:ro
+  - /home/myptyun/data:/app/data
+
+# Docker 命令方式
+docker run -d \
+  -v /home/myptyun/config:/app/config:ro \
+  -v /home/myptyun/data:/app/data \
+  qbit-controller
+```
+
+### 网络配置
 ```yaml
 # 如果在同一机器上
 host: "http://172.17.0.1:8080"  # Docker 默认网关
