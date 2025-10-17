@@ -165,8 +165,8 @@ services:
     
     # 卷映射 - 使用您的自定义路径
     volumes:
-      # 配置文件映射（只读）- 使用您的实际路径
-      - $CONFIG_DIR:/app/config:ro
+      # 配置文件映射（读写）- 使用您的实际路径，以便在 Web 界面中保存配置
+      - $CONFIG_DIR:/app/config
       # 数据目录映射（读写）- 使用您的实际路径
       - $DATA_DIR:/app/data
     

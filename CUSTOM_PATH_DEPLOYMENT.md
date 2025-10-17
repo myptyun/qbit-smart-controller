@@ -107,7 +107,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - /home/myptyun/config:/app/config:ro
+      - /home/myptyun/config:/app/config
       - /home/myptyun/data:/app/data
     environment:
       - TZ=Asia/Shanghai
@@ -134,7 +134,7 @@ docker run -d \
   --name qbit-smart-controller \
   --restart unless-stopped \
   -p 5000:5000 \
-  -v /home/myptyun/config:/app/config:ro \
+  -v /home/myptyun/config:/app/config \
   -v /home/myptyun/data:/app/data \
   -e TZ=Asia/Shanghai \
   -e PYTHONUNBUFFERED=1 \
@@ -282,7 +282,7 @@ docker run -d \
   --name qbit-smart-controller \
   --restart unless-stopped \
   -p 5000:5000 \
-  -v /home/myptyun/config:/app/config:ro \
+  -v /home/myptyun/config:/app/config \
   -v /home/myptyun/data:/app/data \
   -e TZ=Asia/Shanghai \
   -e PYTHONUNBUFFERED=1 \

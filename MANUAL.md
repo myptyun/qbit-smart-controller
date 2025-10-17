@@ -292,7 +292,7 @@ nano /home/myptyun/config/config.yaml
 #### 标准部署
 ```yaml
 volumes:
-  - ./config:/app/config:ro      # 配置文件（只读）
+  - ./config:/app/config         # 配置文件（读写）
   - ./data:/app/data             # 数据目录（读写）
 ```
 
@@ -300,15 +300,20 @@ volumes:
 ```bash
 # Docker Compose 方式
 volumes:
-  - /home/myptyun/config:/app/config:ro
+  - /home/myptyun/config:/app/config
   - /home/myptyun/data:/app/data
 
 # Docker 命令方式
 docker run -d \
-  -v /home/myptyun/config:/app/config:ro \
+  -v /home/myptyun/config:/app/config \
   -v /home/myptyun/data:/app/data \
   qbit-controller
 ```
+
+**⚠️ 重要提示**：
+- 配置目录不要使用 `:ro` (只读) 标志
+- 这样才能在 Web 界面中保存配置修改和实例编辑
+- 应用会在首次启动时自动创建默认配置文件
 
 ### 网络配置
 ```yaml

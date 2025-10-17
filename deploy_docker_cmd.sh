@@ -135,11 +135,12 @@ start_container() {
     log_info "启动容器..."
     
     # 使用您之前的命令格式，但适配您的实际路径
+    # 注意：配置目录不使用 :ro (只读)，以便在 Web 界面中保存配置
     docker run -d \
         --name "$CONTAINER_NAME" \
         --restart unless-stopped \
         -p "$PORT:5000" \
-        -v "$CONFIG_DIR:/app/config:ro" \
+        -v "$CONFIG_DIR:/app/config" \
         -v "$DATA_DIR:/app/data" \
         -e TZ=Asia/Shanghai \
         -e PYTHONUNBUFFERED=1 \
