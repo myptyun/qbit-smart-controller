@@ -135,25 +135,6 @@
         .api-status { font-size: 0.75em; }
         .log-entry { font-family: 'Courier New', monospace; font-size: 0.8em; }
         
-        /* 设备详情表格样式 */
-        .device-details-table {
-            font-size: 0.9rem;
-        }
-        .device-details-table .table {
-            margin-bottom: 0;
-        }
-        .device-details-table .table th {
-            background-color: #f8f9fa;
-            border-top: none;
-            font-weight: 600;
-            font-size: 0.85rem;
-            padding: 0.75rem 0.5rem;
-        }
-        .device-details-table .table td {
-            padding: 0.75rem 0.5rem;
-            vertical-align: middle;
-            border-top: 1px solid #e9ecef;
-        }
         .device-name-badge {
             background-color: #e9ecef;
             color: #495057;
@@ -320,11 +301,6 @@
             .overview-card .card-icon { font-size: 1.4rem; }
             .overview-card .card-label { font-size: 0.8rem; }
             .overview-card .card-subtitle { font-size: 0.7rem; }
-            .device-details-table .table th,
-            .device-details-table .table td {
-                padding: 0.5rem 0.25rem;
-                font-size: 0.8rem;
-            }
             .action-buttons .btn {
                 width: 28px;
                 height: 28px;
@@ -475,9 +451,6 @@
                         <button class="btn btn-outline-primary ms-2" onclick="showLuckyDevicesList()">
                             <i class="fas fa-list me-2"></i>查看所有
                             </button>
-                        <button class="btn btn-outline-info ms-2" onclick="showLuckyDeviceDetails()">
-                            <i class="fas fa-table me-2"></i>设备详情
-                        </button>
                     </div>
                                 </div>
                             </div>
@@ -930,6 +903,9 @@
                 
                 // 处理Lucky设备，提取ProxyList中的详细服务信息
                 if (luckyStatus.devices && luckyStatus.devices.length > 0) {
+                    let totalServices = 0;
+                    let enabledServices = 0;
+                    
                     luckyStatus.devices.forEach(device => {
                         console.log('Device:', device);
                         console.log('Device raw_data:', device.raw_data);
@@ -943,14 +919,22 @@
                             console.log('Statistics found:', statistics);
                             
                             if (Array.isArray(proxyList)) {
-                                proxyList.forEach(proxy => {
-                                    console.log('Processing proxy:', proxy);
+                                totalServices += proxyList.length;
+                                console.log(`Found ${proxyList.length} services in ruleList`);
+                                
+                                proxyList.forEach((proxy, index) => {
+                                    console.log(`Processing proxy ${index}:`, proxy);
                                     console.log('Service Enable:', proxy.Enable);
                                     console.log('Service DisplayInFrontendList:', proxy.DisplayInFrontendList);
                                     console.log('Service Remark:', proxy.Remark);
+                                    console.log('Service Key:', proxy.Key);
+                                    console.log('Service WebServiceType:', proxy.WebServiceType);
+                                    console.log('Service Locations:', proxy.Locations);
+                                    console.log('Service Domains:', proxy.Domains);
                                     
                                     // 显示所有启用的服务（不限制DisplayInFrontendList）
                                     if (proxy.Enable) {
+                                        enabledServices++;
                                         // 从statistics中获取该服务的连接和速度信息
                                         const proxyKey = proxy.Key;
                                         const stats = statistics[proxyKey] || {};
@@ -990,6 +974,7 @@
                                     debugInfo += `<br><small class="text-muted">ruleList数量: ${device.raw_data.ruleList.length}</small>`;
                                     const enabledServices = device.raw_data.ruleList.filter(rule => rule.Enable);
                                     debugInfo += `<br><small class="text-muted">启用服务数量: ${enabledServices.length}</small>`;
+                                    debugInfo += `<br><small class="text-muted">实际处理服务数量: ${proxyServices.length}</small>`;
                                 }
                             }
                         });
@@ -1585,171 +1570,6 @@
             modal.show();
         }
 
-        async function showLuckyDeviceDetails() {
-            try {
-                // 获取最新的设备状态数据
-                const response = await fetch('/api/lucky/status');
-                const statusData = await response.json();
-                
-                const devices = statusData.devices || [];
-                const configDevices = window.dashboard.config.lucky_devices || [];
-                
-                let html = `
-                    <div class="modal fade" id="luckyDeviceDetailsModal" tabindex="-1">
-                        <div class="modal-dialog modal-xl">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">
-                                        <i class="fas fa-table me-2"></i>Lucky 设备详情
-                                    </h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body device-details-table">
-                `;
-                
-                if (devices.length === 0) {
-                    html += '<div class="text-center py-4 text-muted"><i class="fas fa-satellite-dish fa-2x mb-2"></i><p>暂无设备数据</p></div>';
-                } else {
-                    html += `
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>设备名称</th>
-                                        <th>操作</th>
-                                        <th>状态控制</th>
-                                        <th>连接数</th>
-                                        <th>下载数据</th>
-                                        <th>上传数据</th>
-                                        <th>外部URL</th>
-                                        <th>内部地址</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-                    
-                    devices.forEach((device, index) => {
-                        const configDevice = configDevices.find(cd => cd.name === device.device_name) || {};
-                        const isOnline = device.success && device.status === 'online';
-                        const hasConnections = device.connections > 0;
-                        
-                        // 格式化数据大小
-                        const formatBytes = (bytes) => {
-                            if (bytes === 0) return '0 B';
-                            const k = 1024;
-                            const sizes = ['B', 'KB', 'MB', 'GB'];
-                            const i = Math.floor(Math.log(bytes) / Math.log(k));
-                            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-                        };
-                        
-                        // 从API URL提取内部地址
-                        const apiUrl = configDevice.api_url || '';
-                        const urlMatch = apiUrl.match(/http:\/\/([^:]+):(\d+)/);
-                        const internalAddress = urlMatch ? `http://${urlMatch[1]}:${urlMatch[2]}` : '未知';
-                        
-                        // 生成外部URL（示例，实际应该从配置中获取）
-                        const externalUrl = `https://${device.device_name.toLowerCase()}.hsdzdh.com`;
-                        
-                        html += `
-                            <tr>
-                                <td>
-                                    <span class="device-name-badge">${device.device_name}</span>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="btn btn-primary btn-sm" onclick="editLuckyDevice(${index})" title="编辑">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteLuckyDevice(${index})" title="删除">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="status-toggle">
-                                        <button class="btn btn-secondary btn-sm" title="删除">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <div class="toggle-switch ${configDevice.enabled ? 'active' : ''}" onclick="toggleDeviceStatus(${index})">
-                                        </div>
-                                        <span class="small">${configDevice.enabled ? '开' : '关'}</span>
-                                        <button class="btn btn-warning btn-sm" title="日志">
-                                            <i class="fas fa-eye"></i> 日志
-                                        </button>
-                                        <button class="btn btn-success btn-sm" title="反向代理">
-                                            反向代理
-                                        </button>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="data-badge">
-                                        <i class="fas fa-link"></i>
-                                        ${device.connections}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="data-badge">
-                                        <i class="fas fa-arrow-down"></i>
-                                        ${formatBytes(device.download_bytes || 0)}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="data-badge">
-                                        <i class="fas fa-arrow-up"></i>
-                                        ${formatBytes(device.upload_bytes || 0)}
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="${externalUrl}" target="_blank" class="url-badge">
-                                        ${externalUrl}
-                                    </a>
-                                </td>
-                                <td>
-                                    <span class="arrow-separator">→</span>
-                                    <span class="ip-badge">${internalAddress}</span>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                    
-                    html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                }
-                
-                html += `
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-                                    <button type="button" class="btn btn-primary" onclick="refreshLuckyStatus()">
-                                        <i class="fas fa-sync-alt me-1"></i>刷新数据
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // 移除已存在的模态框
-                const existingModal = document.getElementById('luckyDeviceDetailsModal');
-                if (existingModal) {
-                    existingModal.remove();
-                }
-                
-                // 添加新的模态框
-                document.body.insertAdjacentHTML('beforeend', html);
-                
-                // 显示模态框
-                const modal = new bootstrap.Modal(document.getElementById('luckyDeviceDetailsModal'));
-                modal.show();
-                
-            } catch (error) {
-                console.error('获取设备详情失败:', error);
-                alert('获取设备详情失败: ' + error.message);
-            }
-        }
 
         function toggleDeviceControl(index) {
             // 这里应该控制该设备是否参与qB限速逻辑
