@@ -678,14 +678,14 @@
                                 <div class="d-flex align-items-center">
                                     <input type="number" class="form-control form-control-sm" id="normal-download" value="0" min="0">
                                     <small class="text-muted ms-2">0 = 不限速</small>
-                                </div>
+                            </div>
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <label class="form-label small">正常上传 (KB/s)</label>
                                 <div class="d-flex align-items-center">
                                     <input type="number" class="form-control form-control-sm" id="normal-upload" value="0" min="0">
                                     <small class="text-muted ms-2">0 = 不限速</small>
-                                </div>
+                            </div>
                             </div>
                         </div>
                     </div>
@@ -850,8 +850,10 @@
 
             updateCurrentTime() {
                 const now = new Date();
-                document.getElementById('current-time').textContent = 
-                    now.toLocaleString('zh-CN');
+                const currentTimeElement = document.getElementById('current-time');
+                if (currentTimeElement) {
+                    currentTimeElement.textContent = now.toLocaleString('zh-CN');
+                }
             }
 
             async loadVersionInfo() {
@@ -901,13 +903,28 @@
 
             renderControllerSettings() {
                 const settings = this.config.controller_settings || {};
-                document.getElementById('poll-interval').value = settings.poll_interval || 2;
-                document.getElementById('limit-on-delay').value = settings.limit_on_delay || 5;
-                document.getElementById('limit-off-delay').value = settings.limit_off_delay || 30;
-                document.getElementById('limited-download').value = settings.limited_download || 1024;
-                document.getElementById('limited-upload').value = settings.limited_upload || 512;
-                document.getElementById('normal-download').value = settings.normal_download || 0;
-                document.getElementById('normal-upload').value = settings.normal_upload || 0;
+                
+                // 安全地设置控制器设置值
+                const pollInterval = document.getElementById('poll-interval');
+                if (pollInterval) pollInterval.value = settings.poll_interval || 2;
+                
+                const limitOnDelay = document.getElementById('limit-on-delay');
+                if (limitOnDelay) limitOnDelay.value = settings.limit_on_delay || 5;
+                
+                const limitOffDelay = document.getElementById('limit-off-delay');
+                if (limitOffDelay) limitOffDelay.value = settings.limit_off_delay || 30;
+                
+                const limitedDownload = document.getElementById('limited-download');
+                if (limitedDownload) limitedDownload.value = settings.limited_download || 1024;
+                
+                const limitedUpload = document.getElementById('limited-upload');
+                if (limitedUpload) limitedUpload.value = settings.limited_upload || 512;
+                
+                const normalDownload = document.getElementById('normal-download');
+                if (normalDownload) normalDownload.value = settings.normal_download || 0;
+                
+                const normalUpload = document.getElementById('normal-upload');
+                if (normalUpload) normalUpload.value = settings.normal_upload || 0;
             }
 
             async startStatusUpdates() {
