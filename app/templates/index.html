@@ -1130,6 +1130,10 @@
                 const container = document.getElementById('lucky-table-content');
                 let proxyServices = [];
                 
+                // 保存当前的打码状态
+                const targetAddressMasked = document.querySelector('.target-address-column')?.classList.contains('masked') || false;
+                const domainMasked = document.querySelector('.domain-column')?.classList.contains('masked') || false;
+                
                 // 调试信息：打印接收到的数据结构
                 console.log('Lucky Status Data:', luckyStatus);
                 
@@ -1363,6 +1367,14 @@
                 `;
                 
                 container.innerHTML = html;
+                
+                // 恢复打码状态
+                if (targetAddressMasked) {
+                    this.applyMasking('target-address');
+                }
+                if (domainMasked) {
+                    this.applyMasking('domain');
+                }
             }
 
             renderDevicesTable(luckyStatus, qbitStatus) {
@@ -1667,6 +1679,35 @@
         }
 
         // 全局函数
+        function applyMasking(columnType) {
+            const columnClass = columnType === 'target-address' ? 'target-address-column' : 'domain-column';
+            const iconId = columnType === 'target-address' ? 'target-address-icon' : 'domain-icon';
+            
+            // 获取所有相关的列元素
+            const columns = document.querySelectorAll(`.${columnClass}`);
+            const icon = document.getElementById(iconId);
+            
+            if (columns.length > 0 && icon) {
+                // 应用打码状态
+                columns.forEach(col => {
+                    col.classList.add('masked');
+                    // 保存原始内容并显示打码内容
+                    const badge = col.querySelector('.data-badge');
+                    if (badge && !badge.dataset.originalContent) {
+                        badge.dataset.originalContent = badge.innerHTML;
+                    }
+                    if (badge) {
+                        if (columnType === 'target-address') {
+                            badge.innerHTML = '<i class="fas fa-server"></i> ***';
+                        } else if (columnType === 'domain') {
+                            badge.innerHTML = '<i class="fas fa-globe"></i> ***';
+                        }
+                    }
+                });
+                icon.className = 'fas fa-eye-slash';
+            }
+        }
+
         function toggleColumn(columnType) {
             const columnClass = columnType === 'target-address' ? 'target-address-column' : 'domain-column';
             const iconId = columnType === 'target-address' ? 'target-address-icon' : 'domain-icon';
@@ -1691,23 +1732,8 @@
                     });
                     icon.className = 'fas fa-eye';
                 } else {
-                    // 打码内容 - 添加masked类
-                    columns.forEach(col => {
-                        col.classList.add('masked');
-                        // 保存原始内容并显示打码内容
-                        const badge = col.querySelector('.data-badge');
-                        if (badge && !badge.dataset.originalContent) {
-                            badge.dataset.originalContent = badge.innerHTML;
-                        }
-                        if (badge) {
-                            if (columnType === 'target-address') {
-                                badge.innerHTML = '<i class="fas fa-server"></i> ***';
-                            } else if (columnType === 'domain') {
-                                badge.innerHTML = '<i class="fas fa-globe"></i> ***';
-                            }
-                        }
-                    });
-                    icon.className = 'fas fa-eye-slash';
+                    // 打码内容 - 使用applyMasking函数
+                    applyMasking(columnType);
                 }
             }
         }
