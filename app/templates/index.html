@@ -654,6 +654,12 @@
                             qB客户端实体总览
                         </h6>
                         <div>
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="showQbitInstanceModal()">
+                                <i class="fas fa-plus"></i> 添加实例
+                            </button>
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="showQbitInstancesList()">
+                                <i class="fas fa-list"></i> 查看所有
+                            </button>
                             <button class="btn btn-sm btn-outline-light" onclick="refreshAllStatus()">
                                 <i class="fas fa-sync-alt"></i> 刷新
                             </button>
@@ -700,12 +706,7 @@
                         </div>
                         <h5 class="card-title">qBittorrent 实例管理</h5>
                         <p class="card-text text-muted">管理 qBittorrent 实例配置，添加、编辑或删除实例</p>
-                        <button class="btn btn-success" onclick="showQbitInstanceModal()">
-                            <i class="fas fa-plus me-2"></i>添加实例
-                        </button>
-                        <button class="btn btn-outline-success ms-2" onclick="showQbitInstancesList()">
-                            <i class="fas fa-list me-2"></i>查看所有
-                        </button>
+                        <p class="text-muted small">使用上方的"添加实例"和"查看所有"按钮进行管理操作</p>
                     </div>
                 </div>
             </div>
