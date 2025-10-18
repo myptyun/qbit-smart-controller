@@ -1369,16 +1369,18 @@
                 
                 container.innerHTML = html;
                 
-                // 恢复打码状态
-                console.log('恢复打码状态:', { targetAddressMasked, domainMasked });
-                if (targetAddressMasked) {
-                    console.log('恢复目标地址打码状态');
-                    applyMasking('target-address');
-                }
-                if (domainMasked) {
-                    console.log('恢复域名打码状态');
-                    applyMasking('domain');
-                }
+                // 延迟恢复打码状态，确保DOM完全更新
+                setTimeout(() => {
+                    console.log('恢复打码状态:', { targetAddressMasked, domainMasked });
+                    if (targetAddressMasked) {
+                        console.log('恢复目标地址打码状态');
+                        applyMasking('target-address');
+                    }
+                    if (domainMasked) {
+                        console.log('恢复域名打码状态');
+                        applyMasking('domain');
+                    }
+                }, 100);
             }
 
             renderDevicesTable(luckyStatus, qbitStatus) {
