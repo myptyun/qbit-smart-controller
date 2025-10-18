@@ -1277,13 +1277,13 @@
                                     <th class="target-address-column" style="width: 20%;">
                                         目标地址
                                         <button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggleColumn('target-address')" title="隐藏/显示目标地址列">
-                                            <i class="fas fa-eye" id="target-address-icon"></i>
+                                            <i class="fas ${targetAddressMasked ? 'fa-eye-slash' : 'fa-eye'}" id="target-address-icon"></i>
                                         </button>
                                     </th>
                                     <th class="domain-column" style="width: 20%;">
                                         域名
                                         <button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggleColumn('domain')" title="隐藏/显示域名列">
-                                            <i class="fas fa-eye" id="domain-icon"></i>
+                                            <i class="fas ${domainMasked ? 'fa-eye-slash' : 'fa-eye'}" id="domain-icon"></i>
                                         </button>
                                     </th>
                                 </tr>
@@ -1348,13 +1348,13 @@
                             <td class="target-address-column">
                                 <span class="data-badge" title="${service.locations.join(', ')}">
                                     <i class="fas fa-server"></i>
-                                    ${formatLocations(service.locations)}
+                                    ${targetAddressMasked ? '***' : formatLocations(service.locations)}
                                 </span>
                             </td>
                             <td class="domain-column">
                                 <span class="data-badge" title="${service.domains.join(', ')}">
                                     <i class="fas fa-globe"></i>
-                                    ${formatDomains(service.domains)}
+                                    ${domainMasked ? '***' : formatDomains(service.domains)}
                                 </span>
                             </td>
                         </tr>
@@ -1369,18 +1369,21 @@
                 
                 container.innerHTML = html;
                 
-                // 延迟恢复打码状态，确保DOM完全更新
-                setTimeout(() => {
+                // 内容已在渲染时处理，只需要更新图标状态
+                if (targetAddressMasked || domainMasked) {
                     console.log('恢复打码状态:', { targetAddressMasked, domainMasked });
-                    if (targetAddressMasked) {
-                        console.log('恢复目标地址打码状态');
-                        applyMasking('target-address');
-                    }
-                    if (domainMasked) {
-                        console.log('恢复域名打码状态');
-                        applyMasking('domain');
-                    }
-                }, 100);
+                    // 延迟更新图标状态，确保DOM完全更新
+                    setTimeout(() => {
+                        if (targetAddressMasked) {
+                            const icon = document.getElementById('target-address-icon');
+                            if (icon) icon.className = 'fas fa-eye-slash';
+                        }
+                        if (domainMasked) {
+                            const icon = document.getElementById('domain-icon');
+                            if (icon) icon.className = 'fas fa-eye-slash';
+                        }
+                    }, 50);
+                }
             }
 
             renderDevicesTable(luckyStatus, qbitStatus) {
