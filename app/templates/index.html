@@ -1130,9 +1130,9 @@
                 const container = document.getElementById('lucky-table-content');
                 let proxyServices = [];
                 
-                // 保存当前的打码状态
-                const targetAddressMasked = document.querySelector('.target-address-column')?.classList.contains('masked') || false;
-                const domainMasked = document.querySelector('.domain-column')?.classList.contains('masked') || false;
+                // 保存当前的打码状态 - 使用全局状态
+                const targetAddressMasked = columnMaskingState['target-address'];
+                const domainMasked = columnMaskingState['domain'];
                 
                 // 调试信息：打印接收到的数据结构
                 console.log('Lucky Status Data:', luckyStatus);
@@ -1678,6 +1678,12 @@
             }
         }
 
+        // 全局变量跟踪打码状态
+        let columnMaskingState = {
+            'target-address': false,
+            'domain': false
+        };
+
         // 全局函数
         function applyMasking(columnType) {
             const columnClass = columnType === 'target-address' ? 'target-address-column' : 'domain-column';
@@ -1688,6 +1694,9 @@
             const icon = document.getElementById(iconId);
             
             if (columns.length > 0 && icon) {
+                // 更新全局状态
+                columnMaskingState[columnType] = true;
+                
                 // 应用打码状态
                 columns.forEach(col => {
                     col.classList.add('masked');
@@ -1717,11 +1726,12 @@
             const icon = document.getElementById(iconId);
             
             if (columns.length > 0) {
-                // 检查当前状态 - 通过检查是否有masked类来判断
-                const isMasked = columns[0].classList.contains('masked');
+                // 检查当前状态 - 使用全局状态
+                const isMasked = columnMaskingState[columnType];
                 
                 if (isMasked) {
-                    // 显示内容 - 移除masked类
+                    // 显示内容 - 更新全局状态并移除masked类
+                    columnMaskingState[columnType] = false;
                     columns.forEach(col => {
                         col.classList.remove('masked');
                         // 恢复原始内容
