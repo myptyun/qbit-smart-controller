@@ -143,6 +143,10 @@
         #active-connections {
             font-size: 0.75rem !important;
             line-height: 1.2 !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            color: rgba(255,255,255,0.7) !important;
         }
         
         /* 设备状态样式 */
@@ -1555,28 +1559,45 @@
                 const statusCard = document.getElementById('limit-status-card');
                 const activeConnElement = document.getElementById('active-connections');
                 
-                if (controllerState && statusElement && statusCard && activeConnElement) {
-                    const isLimited = controllerState.is_limited;
-                    const totalConnections = controllerState.total_connections || 0;
-                    const limitTimer = controllerState.limit_timer || 0;
-                    const normalTimer = controllerState.normal_timer || 0;
-                    
-                    if (isLimited) {
-                        statusElement.textContent = '限速中';
-                        statusCard.className = 'card status-card limit-active';
-                        activeConnElement.textContent = `${totalConnections.toFixed(1)} 个加权连接`;
-                    } else {
-                        statusElement.textContent = '正常';
-                        statusCard.className = 'card status-card limit-inactive';
+                // 调试信息
+                console.log('Controller state:', controllerState);
+                console.log('Elements found:', {
+                    statusElement: !!statusElement,
+                    statusCard: !!statusCard,
+                    activeConnElement: !!activeConnElement
+                });
+                
+                if (statusElement && statusCard && activeConnElement) {
+                    if (controllerState) {
+                        const isLimited = controllerState.is_limited;
+                        const totalConnections = controllerState.total_connections || 0;
+                        const limitTimer = controllerState.limit_timer || 0;
+                        const normalTimer = controllerState.normal_timer || 0;
                         
-                        if (totalConnections > 0) {
-                            activeConnElement.textContent = `检测到连接，倒计时 ${limitTimer.toFixed(0)}s`;
-                        } else if (normalTimer > 0) {
-                            activeConnElement.textContent = `恢复倒计时 ${normalTimer.toFixed(0)}s`;
+                        if (isLimited) {
+                            statusElement.textContent = '限速中';
+                            statusCard.className = 'overview-card system-status-card limit-active';
+                            activeConnElement.textContent = `${totalConnections.toFixed(1)} 个加权连接`;
                         } else {
-                            activeConnElement.textContent = '无活跃连接';
+                            statusElement.textContent = '正常';
+                            statusCard.className = 'overview-card system-status-card limit-inactive';
+                            
+                            if (totalConnections > 0) {
+                                activeConnElement.textContent = `检测到连接，倒计时 ${limitTimer.toFixed(0)}s`;
+                            } else if (normalTimer > 0) {
+                                activeConnElement.textContent = `恢复倒计时 ${normalTimer.toFixed(0)}s`;
+                            } else {
+                                activeConnElement.textContent = '无活跃连接';
+                            }
                         }
+                    } else {
+                        // 如果没有控制器状态数据，显示默认状态
+                        statusElement.textContent = '正常';
+                        statusCard.className = 'overview-card system-status-card limit-inactive';
+                        activeConnElement.textContent = '无活跃连接';
                     }
+                } else {
+                    console.error('Required elements not found for status card');
                 }
                     
                 // 更新服务状态（如果元素存在）
