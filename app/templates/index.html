@@ -1676,16 +1676,37 @@
             const icon = document.getElementById(iconId);
             
             if (columns.length > 0) {
-                // 检查当前状态
-                const isHidden = columns[0].style.display === 'none';
+                // 检查当前状态 - 通过检查是否有masked类来判断
+                const isMasked = columns[0].classList.contains('masked');
                 
-                if (isHidden) {
-                    // 显示列
-                    columns.forEach(col => col.style.display = '');
+                if (isMasked) {
+                    // 显示内容 - 移除masked类
+                    columns.forEach(col => {
+                        col.classList.remove('masked');
+                        // 恢复原始内容
+                        const badge = col.querySelector('.data-badge');
+                        if (badge && badge.dataset.originalContent) {
+                            badge.innerHTML = badge.dataset.originalContent;
+                        }
+                    });
                     icon.className = 'fas fa-eye';
                 } else {
-                    // 隐藏列
-                    columns.forEach(col => col.style.display = 'none');
+                    // 打码内容 - 添加masked类
+                    columns.forEach(col => {
+                        col.classList.add('masked');
+                        // 保存原始内容并显示打码内容
+                        const badge = col.querySelector('.data-badge');
+                        if (badge && !badge.dataset.originalContent) {
+                            badge.dataset.originalContent = badge.innerHTML;
+                        }
+                        if (badge) {
+                            if (columnType === 'target-address') {
+                                badge.innerHTML = '<i class="fas fa-server"></i> ***';
+                            } else if (columnType === 'domain') {
+                                badge.innerHTML = '<i class="fas fa-globe"></i> ***';
+                            }
+                        }
+                    });
                     icon.className = 'fas fa-eye-slash';
                 }
             }
