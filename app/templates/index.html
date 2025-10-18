@@ -138,10 +138,16 @@
         }
         
         /* 确保限速状态卡片内的文本不会换行导致高度变化 */
-        #limit-status-card .card-label,
-        #limit-status-card .card-subtitle {
+        #limit-status-card .card-label {
             white-space: nowrap !important;
             max-width: 100% !important;
+        }
+        
+        /* 允许连接信息换行显示 */
+        #limit-status-card .card-subtitle {
+            white-space: normal !important;
+            max-width: 100% !important;
+            line-height: 1.1 !important;
         }
         
         /* 确保限速状态卡片的状态文本有固定宽度 */
@@ -1593,9 +1599,9 @@
                             statusCard.className = 'overview-card system-status-card limit-inactive';
                             
                             if (totalConnections > 0) {
-                                activeConnElement.textContent = `检测到连接，倒计时 ${limitTimer.toFixed(0)}s`;
+                                activeConnElement.innerHTML = `检测到连接<br>倒计时 ${limitTimer.toFixed(0)}s`;
                             } else if (normalTimer > 0) {
-                                activeConnElement.textContent = `恢复倒计时 ${normalTimer.toFixed(0)}s`;
+                                activeConnElement.innerHTML = `恢复倒计时<br>${normalTimer.toFixed(0)}s`;
                             } else {
                                 activeConnElement.textContent = '无活跃连接';
                             }
