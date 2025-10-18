@@ -1133,6 +1133,7 @@
                 // 保存当前的打码状态 - 使用全局状态
                 const targetAddressMasked = columnMaskingState['target-address'];
                 const domainMasked = columnMaskingState['domain'];
+                console.log('保存打码状态:', { targetAddressMasked, domainMasked, globalState: columnMaskingState });
                 
                 // 调试信息：打印接收到的数据结构
                 console.log('Lucky Status Data:', luckyStatus);
@@ -1369,11 +1370,14 @@
                 container.innerHTML = html;
                 
                 // 恢复打码状态
+                console.log('恢复打码状态:', { targetAddressMasked, domainMasked });
                 if (targetAddressMasked) {
-                    this.applyMasking('target-address');
+                    console.log('恢复目标地址打码状态');
+                    applyMasking('target-address');
                 }
                 if (domainMasked) {
-                    this.applyMasking('domain');
+                    console.log('恢复域名打码状态');
+                    applyMasking('domain');
                 }
             }
 
@@ -1696,6 +1700,7 @@
             if (columns.length > 0 && icon) {
                 // 更新全局状态
                 columnMaskingState[columnType] = true;
+                console.log('应用打码状态:', columnType, '全局状态:', columnMaskingState);
                 
                 // 应用打码状态
                 columns.forEach(col => {
