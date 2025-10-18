@@ -92,6 +92,16 @@
             background: linear-gradient(135deg, #28a745, #20c997) !important;
         }
         
+        /* 限速状态时的文字位置调整 */
+        .limit-active .card-text {
+            transform: translateX(-10px) !important;
+        }
+        
+        /* 正常状态时保持默认位置 */
+        .limit-inactive .card-text {
+            transform: translateX(-3px) !important;
+        }
+        
         /* 限速状态卡片固定尺寸约束 - 保持原有布局 */
         #limit-status-card {
             min-height: 80px !important;
@@ -125,7 +135,6 @@
             text-align: center !important;
             min-width: 120px !important;
             overflow: visible !important;
-            transform: translateX(-3px) !important;
         }
         
         /* 确保限速状态卡片内的文本不会换行导致高度变化 */
