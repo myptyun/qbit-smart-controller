@@ -1348,13 +1348,13 @@
                             <td class="target-address-column">
                                 <span class="data-badge" title="${service.locations.join(', ')}">
                                     <i class="fas fa-server"></i>
-                                    ${targetAddressMasked ? '***' : formatLocations(service.locations)}
+                                    ${targetAddressMasked ? '****************' : formatLocations(service.locations)}
                                 </span>
                             </td>
                             <td class="domain-column">
                                 <span class="data-badge" title="${service.domains.join(', ')}">
                                     <i class="fas fa-globe"></i>
-                                    ${domainMasked ? '***' : formatDomains(service.domains)}
+                                    ${domainMasked ? '****************' : formatDomains(service.domains)}
                                 </span>
                             </td>
                         </tr>
@@ -1717,9 +1717,9 @@
                     }
                     if (badge) {
                         if (columnType === 'target-address') {
-                            badge.innerHTML = '<i class="fas fa-server"></i> ***';
+                            badge.innerHTML = '<i class="fas fa-server"></i> ****************';
                         } else if (columnType === 'domain') {
-                            badge.innerHTML = '<i class="fas fa-globe"></i> ***';
+                            badge.innerHTML = '<i class="fas fa-globe"></i> ****************';
                         }
                     }
                 });
