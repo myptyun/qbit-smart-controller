@@ -702,17 +702,24 @@ class SpeedController:
                             service_key_alt = conn.get("key", "")
                             
                             # 检查服务是否被禁用
-                            # 修改逻辑：只有明确设置为true的服务才启用，其他都禁用
-                            is_service_enabled = (
-                                (service_key in service_control and service_control[service_key] == True) or
-                                (service_key_alt in service_control and service_control[service_key_alt] == True)
-                            )
+                            # 动态处理：新检测到的服务默认启用，已配置的服务按配置执行
+                            service_name = service_key or service_key_alt
+                            
+                            # 如果服务在配置文件中，使用配置的值
+                            if service_key in service_control:
+                                is_service_enabled = service_control[service_key] == True
+                            elif service_key_alt in service_control:
+                                is_service_enabled = service_control[service_key_alt] == True
+                            else:
+                                # 新检测到的服务，默认启用
+                                is_service_enabled = True
+                                logger.info(f"🆕 检测到新服务: {service_name}，默认启用")
                             
                             if is_service_enabled:
                                 device_connections += conn.get("connections", 0)
-                                logger.debug(f"📊 {device.get('name')} - 服务 {service_key or service_key_alt} 启用，连接数: {conn.get('connections', 0)}")
+                                logger.debug(f"📊 {device.get('name')} - 服务 {service_name} 启用，连接数: {conn.get('connections', 0)}")
                             else:
-                                logger.debug(f"📊 {device.get('name')} - 服务 {service_key or service_key_alt} 禁用，连接数: 0")
+                                logger.debug(f"📊 {device.get('name')} - 服务 {service_name} 禁用，连接数: 0")
                         
                         logger.info(f"📊 {device.get('name')} - 设备启用，总连接数: {device_connections}")
                     else:

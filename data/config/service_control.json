@@ -1,12 +1,5 @@
 {
-  "Proxmox": false,
-  "hzik": false,
-  "hzun": false,
-  "Web服务1": false,
-  "API服务": false,
-  "数据库服务": false,
-  "缓存服务": false,
-  "文件服务": false,
-  "监控服务": false,
-  "日志服务": false
+  "Proxmox": true,
+  "hzik": true,
+  "hzun": false
 }
