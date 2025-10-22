@@ -1,6 +1,6 @@
 {
-  "Proxmox": true,
-  "hzik": true,
+  "Proxmox": false,
+  "hzik": false,
   "hzun": false,
   "ACDRiXi3p4EV2qZx": false
 }
