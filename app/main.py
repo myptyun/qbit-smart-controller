@@ -720,14 +720,11 @@ class SpeedController:
             await asyncio.sleep(5)  # 出错后等待5秒再重试
     
     async def _collect_total_connections(self, config: dict) -> float:
-        """采集所有设备的总连接数（禁用设备连接数+0，启用设备连接数正常累加）"""
+        """采集所有设备的总连接数（只根据服务级别控制计算）"""
         devices = config.get("lucky_devices", [])
         total = 0.0
         
         for device in devices:
-            # 检查设备是否启用控制
-            device_enabled = device.get("enabled", True)
-            
             try:
                 result = await self.lucky_monitor.get_device_connections(device)
                 if result.get("success"):
@@ -735,31 +732,25 @@ class SpeedController:
                     detailed_connections = result.get("detailed_connections", [])
                     device_connections = 0.0
                     
-                    if device_enabled:
-                        # 设备启用：只累加启用控制的服务连接数
-                        # 首先发现并初始化新服务
-                        self.config_manager.discover_and_initialize_services(detailed_connections)
-                        
-                        for conn in detailed_connections:
-                            service_key = conn.get("rule_name", "")
-                            service_key_alt = conn.get("key", "")
-                            service_name = service_key or service_key_alt
-                            
-                            # 使用动态服务控制状态
-                            is_service_enabled = self.config_manager.get_service_control_status(service_key or service_key_alt)
-                            
-                            if is_service_enabled:
-                                device_connections += conn.get("connections", 0)
-                                logger.debug(f"📊 {device.get('name')} - 服务 {service_name} 启用，连接数: {conn.get('connections', 0)}")
-                            else:
-                                logger.debug(f"📊 {device.get('name')} - 服务 {service_name} 禁用，连接数: 0")
-                        
-                        logger.info(f"📊 {device.get('name')} - 设备启用，总连接数: {device_connections}")
-                    else:
-                        # 设备禁用：连接数+0
-                        device_connections = 0.0
-                        logger.info(f"📊 {device.get('name')} - 设备禁用，连接数: 0")
+                    # 首先发现并初始化新服务
+                    self.config_manager.discover_and_initialize_services(detailed_connections)
                     
+                    # 只累加启用控制的服务连接数
+                    for conn in detailed_connections:
+                        service_key = conn.get("rule_name", "")
+                        service_key_alt = conn.get("key", "")
+                        service_name = service_key or service_key_alt
+                        
+                        # 使用动态服务控制状态
+                        is_service_enabled = self.config_manager.get_service_control_status(service_key or service_key_alt)
+                        
+                        if is_service_enabled:
+                            device_connections += conn.get("connections", 0)
+                            logger.debug(f"📊 {device.get('name')} - 服务 {service_name} 启用，连接数: {conn.get('connections', 0)}")
+                        else:
+                            logger.debug(f"📊 {device.get('name')} - 服务 {service_name} 禁用，连接数: 0")
+                    
+                    logger.info(f"📊 {device.get('name')} - 总连接数: {device_connections}")
                     total += device_connections
                     
             except Exception as e:
@@ -1556,19 +1547,8 @@ async def get_lucky_status():
     
     status_data = []
     for device in devices:
-        if device.get("enabled", True):
-            device_status = await lucky_monitor.get_device_connections(device)
-            status_data.append(device_status)
-        else:
-            status_data.append({
-                "success": False,
-                "device_name": device["name"],
-                "connections": 0,
-                "weighted_connections": 0,
-                "status": "disabled",
-                "error": "设备已禁用",
-                "last_update": datetime.now().isoformat()
-            })
+        device_status = await lucky_monitor.get_device_connections(device)
+        status_data.append(device_status)
     
     print(f"✅ Lucky状态采集完成: {len(status_data)} 个设备")
     return {"devices": status_data}
@@ -1582,51 +1562,42 @@ async def get_lucky_connections():
     
     detailed_data = []
     for device in devices:
-        if device.get("enabled", True):
-            try:
-                session = await lucky_monitor.get_session()
-                api_url = device["api_url"]
-                
-                async with session.get(api_url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        
-                        # 解析详细的连接信息
-                        connections_info = lucky_monitor._parse_detailed_connections(data)
-                        
-                        detailed_data.append({
-                            "success": True,
-                            "device_name": device["name"],
-                            "device_info": {
-                                "api_url": api_url,
-                                "weight": device.get("weight", 1.0),
-                                "description": device.get("description", "")
-                            },
-                            "connections": connections_info,
-                            "total_connections": sum(conn.get("connections", 0) for conn in connections_info),
-                            "last_update": datetime.now().isoformat(),
-                            "raw_data": data
-                        })
-                    else:
-                        detailed_data.append({
-                            "success": False,
-                            "device_name": device["name"],
-                            "error": f"HTTP {response.status}",
-                            "last_update": datetime.now().isoformat()
-                        })
-            except Exception as e:
-                detailed_data.append({
-                    "success": False,
-                    "device_name": device["name"],
-                    "error": str(e),
-                    "last_update": datetime.now().isoformat()
-                })
-        else:
+        try:
+            session = await lucky_monitor.get_session()
+            api_url = device["api_url"]
+            
+            async with session.get(api_url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    # 解析详细的连接信息
+                    connections_info = lucky_monitor._parse_detailed_connections(data)
+                    
+                    detailed_data.append({
+                        "success": True,
+                        "device_name": device["name"],
+                        "device_info": {
+                            "api_url": api_url,
+                            "weight": device.get("weight", 1.0),
+                            "description": device.get("description", "")
+                        },
+                        "connections": connections_info,
+                        "total_connections": sum(conn.get("connections", 0) for conn in connections_info),
+                        "last_update": datetime.now().isoformat(),
+                        "raw_data": data
+                    })
+                else:
+                    detailed_data.append({
+                        "success": False,
+                        "device_name": device["name"],
+                        "error": f"HTTP {response.status}",
+                        "last_update": datetime.now().isoformat()
+                    })
+        except Exception as e:
             detailed_data.append({
                 "success": False,
                 "device_name": device["name"],
-                "status": "disabled",
-                "error": "设备已禁用",
+                "error": str(e),
                 "last_update": datetime.now().isoformat()
             })
     
@@ -1959,20 +1930,19 @@ async def get_connection_health():
         lucky_devices = config.get("lucky_devices", [])
         lucky_health = []
         for device in lucky_devices:
-            if device.get("enabled", True):
-                try:
-                    result = await lucky_monitor.test_connection(device["api_url"])
-                    lucky_health.append({
-                        "device_name": device["name"],
-                        "status": "healthy" if result.get("success") else "unhealthy",
-                        "details": result
-                    })
-                except Exception as e:
-                    lucky_health.append({
-                        "device_name": device["name"],
-                        "status": "error",
-                        "details": {"error": str(e)}
-                    })
+            try:
+                result = await lucky_monitor.test_connection(device["api_url"])
+                lucky_health.append({
+                    "device_name": device["name"],
+                    "status": "healthy" if result.get("success") else "unhealthy",
+                    "details": result
+                })
+            except Exception as e:
+                lucky_health.append({
+                    "device_name": device["name"],
+                    "status": "error",
+                    "details": {"error": str(e)}
+                })
         
         # 检查 qBittorrent 实例连接
         qbit_instances = config.get("qbittorrent_instances", [])
