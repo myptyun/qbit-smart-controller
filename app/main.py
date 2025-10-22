@@ -108,6 +108,8 @@ class ConfigManager:
     def __init__(self):
         self.config_file = Path("config/config.yaml")
         self.service_control_file = Path("data/config/service_control.json")
+        # 动态服务控制状态 - 内存存储
+        self._service_control_state = {}
         self.default_config = {
             "lucky_devices": [
                 {
@@ -140,7 +142,7 @@ class ConfigManager:
             }
         }
         self._ensure_config_exists()
-        self._ensure_service_control_exists()
+        self._load_persisted_service_control()
     
     def _ensure_config_exists(self):
         """确保配置文件存在"""
@@ -148,12 +150,29 @@ class ConfigManager:
             print("📁 配置文件不存在，创建默认配置...")
             self.save_config(self.default_config)
     
-    def _ensure_service_control_exists(self):
-        """确保服务控制状态文件存在"""
-        if not self.service_control_file.exists():
-            print("📁 服务控制状态文件不存在，创建默认配置...")
+    def _load_persisted_service_control(self):
+        """加载持久化的服务控制状态"""
+        try:
+            if self.service_control_file.exists():
+                with open(self.service_control_file, 'r', encoding='utf-8') as f:
+                    persisted_state = json.load(f)
+                self._service_control_state.update(persisted_state)
+                print(f"✅ 加载了 {len(persisted_state)} 个已保存的服务控制状态")
+            else:
+                print("📝 服务控制文件不存在，使用空状态")
+        except Exception as e:
+            print(f"❌ 加载服务控制状态失败: {e}")
+    
+    def _save_persisted_service_control(self):
+        """保存服务控制状态到文件"""
+        try:
             self.service_control_file.parent.mkdir(parents=True, exist_ok=True)
-            self.save_service_control({})
+            with open(self.service_control_file, 'w', encoding='utf-8') as f:
+                json.dump(self._service_control_state, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"❌ 保存服务控制状态失败: {e}")
+            return False
     
     def load_config(self):
         """加载配置文件"""
@@ -177,39 +196,41 @@ class ConfigManager:
             print(f"❌ 配置文件保存失败: {e}")
             return False
     
-    def load_service_control(self):
-        """加载服务控制状态"""
-        try:
-            if not self.service_control_file.exists():
-                return {}
-            with open(self.service_control_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"❌ 服务控制状态加载失败: {e}")
-            return {}
-    
-    def save_service_control(self, service_control):
-        """保存服务控制状态"""
-        try:
-            self.service_control_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.service_control_file, 'w', encoding='utf-8') as f:
-                json.dump(service_control, f, ensure_ascii=False, indent=2)
-            print("✅ 服务控制状态保存成功")
-            return True
-        except Exception as e:
-            print(f"❌ 服务控制状态保存失败: {e}")
-            return False
+    def get_service_control_status(self, service_key: str) -> bool:
+        """获取服务控制状态 - 动态处理"""
+        # 如果服务在内存状态中，使用保存的状态
+        if service_key in self._service_control_state:
+            return self._service_control_state[service_key]
+        # 新服务默认启用
+        return True
     
     def set_service_control_status(self, service_key: str, enabled: bool):
-        """设置单个服务的控制状态"""
-        service_control = self.load_service_control()
-        service_control[service_key] = enabled
-        return self.save_service_control(service_control)
+        """设置服务控制状态 - 动态处理"""
+        # 更新内存状态
+        self._service_control_state[service_key] = enabled
+        # 持久化到文件
+        return self._save_persisted_service_control()
     
-    def get_service_control_status(self, service_key: str) -> bool:
-        """获取单个服务的控制状态，默认为True（启用）"""
-        service_control = self.load_service_control()
-        return service_control.get(service_key, True)
+    def get_all_service_control_status(self):
+        """获取所有服务控制状态"""
+        return self._service_control_state.copy()
+    
+    def discover_and_initialize_services(self, detected_services):
+        """发现并初始化新服务"""
+        new_services = []
+        for service in detected_services:
+            service_key = service.get("rule_name") or service.get("key", "")
+            if service_key and service_key not in self._service_control_state:
+                # 新服务默认启用
+                self._service_control_state[service_key] = True
+                new_services.append(service_key)
+        
+        if new_services:
+            print(f"🆕 发现 {len(new_services)} 个新服务: {', '.join(new_services)}")
+            # 保存新发现的服务状态
+            self._save_persisted_service_control()
+        
+        return new_services
 
 class LuckyMonitor:
     def __init__(self, config_manager):
@@ -696,24 +717,16 @@ class SpeedController:
                     
                     if device_enabled:
                         # 设备启用：只累加启用控制的服务连接数
-                        service_control = self.config_manager.load_service_control()
+                        # 首先发现并初始化新服务
+                        self.config_manager.discover_and_initialize_services(detailed_connections)
+                        
                         for conn in detailed_connections:
                             service_key = conn.get("rule_name", "")
                             service_key_alt = conn.get("key", "")
-                            
-                            # 检查服务是否被禁用
-                            # 动态处理：新检测到的服务默认启用，已配置的服务按配置执行
                             service_name = service_key or service_key_alt
                             
-                            # 如果服务在配置文件中，使用配置的值
-                            if service_key in service_control:
-                                is_service_enabled = service_control[service_key] == True
-                            elif service_key_alt in service_control:
-                                is_service_enabled = service_control[service_key_alt] == True
-                            else:
-                                # 新检测到的服务，默认启用
-                                is_service_enabled = True
-                                logger.info(f"🆕 检测到新服务: {service_name}，默认启用")
+                            # 使用动态服务控制状态
+                            is_service_enabled = self.config_manager.get_service_control_status(service_key or service_key_alt)
                             
                             if is_service_enabled:
                                 device_connections += conn.get("connections", 0)
@@ -1999,7 +2012,7 @@ async def get_connection_health():
 async def get_service_control_status():
     """获取所有服务的控制状态"""
     try:
-        service_control = config_manager.load_service_control()
+        service_control = config_manager.get_all_service_control_status()
         return {
             "service_control": service_control,
             "timestamp": datetime.now().isoformat()
