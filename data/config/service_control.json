@@ -1,5 +1,7 @@
 {
   "Proxmox": false,
   "hzik": false,
-  "hzun": false
+  "hzun": false,
+  "Web服务1": false,
+  "API服务": false
 }
