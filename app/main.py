@@ -137,7 +137,6 @@ class ConfigManager:
                 "limited_upload": 512,
                 "normal_download": 0,
                 "normal_upload": 0,
-                "min_connections_threshold": 1
             }
         }
         self._ensure_config_exists()
@@ -629,18 +628,11 @@ class SpeedController:
             # 1. 采集所有 Lucky 设备的连接数
             self.total_connections = await self._collect_total_connections(config)
             
-            # 改进限速逻辑：同时考虑连接数阈值和服务控制状态
-            min_connections_threshold = settings.get("min_connections_threshold", 1)
-            has_sufficient_connections = self.total_connections >= min_connections_threshold
-            
-            # 检查是否有启用的服务控制状态
-            has_enabled_services = await self._check_enabled_services(config)
-            
-            # 限速条件：连接数达到阈值 AND 有启用的服务
-            has_connections = has_sufficient_connections and has_enabled_services
+            # 简化限速逻辑：总连接数 > 0 即触发限速
+            has_connections = self.total_connections > 0
             
             # 详细日志显示限速判断条件
-            logger.info(f"🔍 限速判断: 连接数={self.total_connections:.1f} (阈值={min_connections_threshold}) -> {has_sufficient_connections}, 启用服务={has_enabled_services} -> 最终结果={has_connections}")
+            logger.info(f"🔍 限速判断: 总连接数={self.total_connections:.1f} -> 触发限速={has_connections}")
             
             # 2. 状态机逻辑
             if has_connections and not self.is_limited:
@@ -648,7 +640,7 @@ class SpeedController:
                 self.limit_timer += poll_interval
                 self.normal_timer = 0
                 
-                logger.info(f"⚠️ 检测到 {self.total_connections:.1f} 个加权连接 (阈值: {min_connections_threshold})，有启用服务，限速倒计时: {self.limit_timer}/{limit_on_delay}秒")
+                logger.info(f"⚠️ 检测到 {self.total_connections:.1f} 个连接，限速倒计时: {self.limit_timer}/{limit_on_delay}秒")
                 
                 if self.limit_timer >= limit_on_delay:
                     # 触发限速
@@ -687,87 +679,39 @@ class SpeedController:
             await asyncio.sleep(5)  # 出错后等待5秒再重试
     
     async def _collect_total_connections(self, config: dict) -> float:
-        """采集所有设备的总加权连接数（只统计启用控制的服务）"""
+        """采集所有设备的总连接数（禁用设备连接数+0，启用设备连接数正常累加）"""
         devices = config.get("lucky_devices", [])
         total = 0.0
         
         for device in devices:
-            if not device.get("enabled", True):
-                continue
-                
+            # 检查设备是否启用控制
+            device_enabled = device.get("enabled", True)
+            
             try:
                 result = await self.lucky_monitor.get_device_connections(device)
                 if result.get("success"):
-                    # 获取详细连接信息，只统计启用控制的服务
+                    # 获取详细连接信息
                     detailed_connections = result.get("detailed_connections", [])
-                    controlled_connections = 0.0
+                    device_connections = 0.0
                     
-                    for conn in detailed_connections:
-                        # 使用多个可能的服务标识符来匹配控制状态
-                        service_key = conn.get("rule_name", "")
-                        service_key_alt = conn.get("key", "")  # 备用标识符
-                        
-                        # 检查服务控制状态（与_check_enabled_services保持一致）：
-                        # 1. 如果明确设置为false，则禁用
-                        # 2. 如果明确设置为true，则启用
-                        # 3. 如果未设置，则默认启用
-                        service_control = self.config_manager.load_service_control()
-                        is_disabled = (
-                            (service_key in service_control and service_control[service_key] == False) or
-                            (service_key_alt in service_control and service_control[service_key_alt] == False)
-                        )
-                        
-                        if not is_disabled:
-                            controlled_connections += conn.get("connections", 0)
+                    if device_enabled:
+                        # 设备启用：累加所有服务的连接数
+                        for conn in detailed_connections:
+                            device_connections += conn.get("connections", 0)
+                        logger.info(f"📊 {device.get('name')} - 设备启用，连接数: {device_connections}")
+                    else:
+                        # 设备禁用：连接数+0
+                        device_connections = 0.0
+                        logger.info(f"📊 {device.get('name')} - 设备禁用，连接数: 0")
                     
-                    # 应用设备权重
-                    weighted_connections = controlled_connections * device.get("weight", 1.0)
-                    total += weighted_connections
+                    total += device_connections
                     
-                    logger.info(f"📊 {device.get('name')} - 总连接数: {sum(conn.get('connections', 0) for conn in detailed_connections)}, 控制连接数: {controlled_connections}, 加权: {weighted_connections}")
             except Exception as e:
                 logger.error(f"❌ 采集设备 {device.get('name')} 失败: {e}")
         
-        logger.info(f"📊 总加权连接数: {total:.1f}")
+        logger.info(f"📊 总连接数: {total:.1f}")
         return total
     
-    async def _check_enabled_services(self, config: dict) -> bool:
-        """检查是否有启用的服务控制状态"""
-        devices = config.get("lucky_devices", [])
-        service_control = self.config_manager.load_service_control()
-        
-        for device in devices:
-            if not device.get("enabled", True):
-                continue
-                
-            try:
-                result = await self.lucky_monitor.get_device_connections(device)
-                if result.get("success"):
-                    detailed_connections = result.get("detailed_connections", [])
-                    
-                    for conn in detailed_connections:
-                        service_key = conn.get("rule_name", "")
-                        service_key_alt = conn.get("key", "")
-                        
-                        # 检查服务控制状态：
-                        # 1. 如果明确设置为false，则禁用
-                        # 2. 如果明确设置为true，则启用
-                        # 3. 如果未设置，则默认启用（保持原有行为）
-                        is_disabled = (
-                            (service_key in service_control and service_control[service_key] == False) or
-                            (service_key_alt in service_control and service_control[service_key_alt] == False)
-                        )
-                        
-                        if not is_disabled:
-                            logger.info(f"✅ 发现启用的服务: {service_key or service_key_alt} (状态: {service_control.get(service_key or service_key_alt, '默认启用')})")
-                            return True
-                        else:
-                            logger.debug(f"❌ 服务已禁用: {service_key or service_key_alt}")
-            except Exception as e:
-                logger.error(f"❌ 检查设备 {device.get('name')} 启用服务失败: {e}")
-        
-        logger.info("❌ 没有发现启用的服务")
-        return False
     
     async def _apply_limited_mode(self, settings: dict):
         """应用限速模式"""
