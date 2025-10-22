@@ -702,12 +702,13 @@ class SpeedController:
                             service_key_alt = conn.get("key", "")
                             
                             # 检查服务是否被禁用
-                            is_service_disabled = (
-                                (service_key in service_control and service_control[service_key] == False) or
-                                (service_key_alt in service_control and service_control[service_key_alt] == False)
+                            # 修改逻辑：只有明确设置为true的服务才启用，其他都禁用
+                            is_service_enabled = (
+                                (service_key in service_control and service_control[service_key] == True) or
+                                (service_key_alt in service_control and service_control[service_key_alt] == True)
                             )
                             
-                            if not is_service_disabled:
+                            if is_service_enabled:
                                 device_connections += conn.get("connections", 0)
                                 logger.debug(f"📊 {device.get('name')} - 服务 {service_key or service_key_alt} 启用，连接数: {conn.get('connections', 0)}")
                             else:
