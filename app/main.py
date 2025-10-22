@@ -107,6 +107,7 @@ except Exception as e:
 class ConfigManager:
     def __init__(self):
         self.config_file = Path("config/config.yaml")
+        self.service_control_file = Path("data/config/service_control.json")
         self.default_config = {
             "lucky_devices": [
                 {
@@ -139,12 +140,20 @@ class ConfigManager:
             }
         }
         self._ensure_config_exists()
+        self._ensure_service_control_exists()
     
     def _ensure_config_exists(self):
         """确保配置文件存在"""
         if not self.config_file.exists():
             print("📁 配置文件不存在，创建默认配置...")
             self.save_config(self.default_config)
+    
+    def _ensure_service_control_exists(self):
+        """确保服务控制状态文件存在"""
+        if not self.service_control_file.exists():
+            print("📁 服务控制状态文件不存在，创建默认配置...")
+            self.service_control_file.parent.mkdir(parents=True, exist_ok=True)
+            self.save_service_control({})
     
     def load_config(self):
         """加载配置文件"""
@@ -167,6 +176,40 @@ class ConfigManager:
         except Exception as e:
             print(f"❌ 配置文件保存失败: {e}")
             return False
+    
+    def load_service_control(self):
+        """加载服务控制状态"""
+        try:
+            if not self.service_control_file.exists():
+                return {}
+            with open(self.service_control_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"❌ 服务控制状态加载失败: {e}")
+            return {}
+    
+    def save_service_control(self, service_control):
+        """保存服务控制状态"""
+        try:
+            self.service_control_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.service_control_file, 'w', encoding='utf-8') as f:
+                json.dump(service_control, f, ensure_ascii=False, indent=2)
+            print("✅ 服务控制状态保存成功")
+            return True
+        except Exception as e:
+            print(f"❌ 服务控制状态保存失败: {e}")
+            return False
+    
+    def set_service_control_status(self, service_key: str, enabled: bool):
+        """设置单个服务的控制状态"""
+        service_control = self.load_service_control()
+        service_control[service_key] = enabled
+        return self.save_service_control(service_control)
+    
+    def get_service_control_status(self, service_key: str) -> bool:
+        """获取单个服务的控制状态，默认为True（启用）"""
+        service_control = self.load_service_control()
+        return service_control.get(service_key, True)
 
 class LuckyMonitor:
     def __init__(self, config_manager):
@@ -630,7 +673,7 @@ class SpeedController:
             await asyncio.sleep(5)  # 出错后等待5秒再重试
     
     async def _collect_total_connections(self, config: dict) -> float:
-        """采集所有设备的总加权连接数"""
+        """采集所有设备的总加权连接数（只统计启用控制的服务）"""
         devices = config.get("lucky_devices", [])
         total = 0.0
         
@@ -641,7 +684,21 @@ class SpeedController:
             try:
                 result = await self.lucky_monitor.get_device_connections(device)
                 if result.get("success"):
-                    total += result.get("weighted_connections", 0)
+                    # 获取详细连接信息，只统计启用控制的服务
+                    detailed_connections = result.get("detailed_connections", [])
+                    controlled_connections = 0.0
+                    
+                    for conn in detailed_connections:
+                        service_key = conn.get("rule_name", "")
+                        # 检查该服务是否启用控制
+                        if self.config_manager.get_service_control_status(service_key):
+                            controlled_connections += conn.get("connections", 0)
+                    
+                    # 应用设备权重
+                    weighted_connections = controlled_connections * device.get("weight", 1.0)
+                    total += weighted_connections
+                    
+                    logger.debug(f"📊 {device.get('name')} - 控制连接数: {controlled_connections}, 加权: {weighted_connections}")
             except Exception as e:
                 logger.error(f"❌ 采集设备 {device.get('name')} 失败: {e}")
         
@@ -1905,6 +1962,82 @@ async def get_connection_health():
     except Exception as e:
         logger.error(f"获取连接健康状态异常: {e}")
         raise HTTPException(status_code=500, detail=f"获取连接健康状态失败: {str(e)}")
+
+@app.get("/api/lucky/service-control")
+async def get_service_control_status():
+    """获取所有服务的控制状态"""
+    try:
+        service_control = config_manager.load_service_control()
+        return {
+            "service_control": service_control,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"获取服务控制状态失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取服务控制状态失败: {str(e)}")
+
+@app.post("/api/lucky/service-control")
+async def set_service_control_status(request: Request):
+    """设置服务控制状态"""
+    try:
+        data = await request.json()
+        service_key = data.get("service_key")
+        enabled = data.get("enabled", True)
+        
+        if not service_key:
+            raise HTTPException(status_code=400, detail="缺少service_key参数")
+        
+        success = config_manager.set_service_control_status(service_key, enabled)
+        
+        if success:
+            logger.info(f"✅ 服务控制状态已更新: {service_key} = {enabled}")
+            return {
+                "message": f"服务 {service_key} 控制状态已设置为 {'启用' if enabled else '禁用'}",
+                "status": "success",
+                "service_key": service_key,
+                "enabled": enabled,
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=500, detail="保存服务控制状态失败")
+            
+    except Exception as e:
+        logger.error(f"设置服务控制状态失败: {e}")
+        raise HTTPException(status_code=400, detail=f"设置服务控制状态失败: {str(e)}")
+
+@app.put("/api/lucky/service-control/batch")
+async def batch_set_service_control_status(request: Request):
+    """批量设置服务控制状态"""
+    try:
+        data = await request.json()
+        service_controls = data.get("service_controls", {})
+        
+        if not isinstance(service_controls, dict):
+            raise HTTPException(status_code=400, detail="service_controls必须是字典格式")
+        
+        # 加载现有状态
+        current_control = config_manager.load_service_control()
+        
+        # 更新状态
+        current_control.update(service_controls)
+        
+        # 保存状态
+        success = config_manager.save_service_control(current_control)
+        
+        if success:
+            logger.info(f"✅ 批量更新服务控制状态: {len(service_controls)} 个服务")
+            return {
+                "message": f"已批量更新 {len(service_controls)} 个服务的控制状态",
+                "status": "success",
+                "updated_count": len(service_controls),
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=500, detail="批量保存服务控制状态失败")
+            
+    except Exception as e:
+        logger.error(f"批量设置服务控制状态失败: {e}")
+        raise HTTPException(status_code=400, detail=f"批量设置服务控制状态失败: {str(e)}")
 
 @app.get("/health")
 async def health_check():
