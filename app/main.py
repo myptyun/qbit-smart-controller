@@ -477,8 +477,29 @@ class LuckyMonitor:
             print("🔍 开始解析Lucky详细连接数据...")
             connections_info = []
             
-            # 方法1: 从statistics中提取详细信息
-            if "statistics" in data and data["statistics"]:
+            # 方法1: 从ProxyList中提取详细信息（主要方法）
+            if "ProxyList" in data and isinstance(data["ProxyList"], list):
+                for proxy in data["ProxyList"]:
+                    service_key = proxy.get("Key", "")
+                    connections = proxy.get("Connections", 0)
+                    service_type = proxy.get("WebServiceType", "unknown")
+                    enabled = proxy.get("Enable", True)
+                    locations = proxy.get("Locations", [])
+                    
+                    # 无论连接数是否为0，都记录服务信息（用于状态控制）
+                    connections_info.append({
+                        "rule_name": service_key,
+                        "key": service_key,  # 使用Key字段作为唯一标识
+                        "connections": connections,
+                        "service_type": service_type,
+                        "enabled": enabled,
+                        "locations": locations,
+                        "status": "active" if connections > 0 else "inactive"
+                    })
+                    print(f"  📡 服务 {service_key}: {connections} 个连接 (类型: {service_type})")
+            
+            # 方法2: 从statistics中提取详细信息（备用方法）
+            elif "statistics" in data and data["statistics"]:
                 for rule_key, rule_stats in data["statistics"].items():
                     connections = (
                         rule_stats.get("Connections", 0) or 
@@ -487,21 +508,20 @@ class LuckyMonitor:
                         rule_stats.get("ActiveConnections", 0)
                     )
                     
-                    if connections > 0:
-                        connections_info.append({
-                            "rule_name": rule_key,
-                            "key": rule_key,  # 添加key字段，用于状态控制匹配
-                            "connections": connections,
-                            "download_bytes": rule_stats.get("DownloadBytes", 0),
-                            "upload_bytes": rule_stats.get("UploadBytes", 0),
-                            "download_speed": rule_stats.get("DownloadSpeed", 0),
-                            "upload_speed": rule_stats.get("UploadSpeed", 0),
-                            "last_activity": rule_stats.get("LastActivity", ""),
-                            "status": "active" if connections > 0 else "inactive"
-                        })
-                        print(f"  📡 规则 {rule_key}: {connections} 个连接")
+                    connections_info.append({
+                        "rule_name": rule_key,
+                        "key": rule_key,
+                        "connections": connections,
+                        "download_bytes": rule_stats.get("DownloadBytes", 0),
+                        "upload_bytes": rule_stats.get("UploadBytes", 0),
+                        "download_speed": rule_stats.get("DownloadSpeed", 0),
+                        "upload_speed": rule_stats.get("UploadSpeed", 0),
+                        "last_activity": rule_stats.get("LastActivity", ""),
+                        "status": "active" if connections > 0 else "inactive"
+                    })
+                    print(f"  📡 规则 {rule_key}: {connections} 个连接")
             
-            # 方法2: 从ruleList中提取详细信息
+            # 方法3: 从ruleList中提取详细信息（备用方法）
             elif "ruleList" in data and isinstance(data["ruleList"], list):
                 for rule in data["ruleList"]:
                     rule_name = rule.get("RuleName", "未知规则")
@@ -514,7 +534,7 @@ class LuckyMonitor:
                     
                     connections_info.append({
                         "rule_name": rule_name,
-                        "key": rule_name,  # 添加key字段，用于状态控制匹配
+                        "key": rule_name,
                         "connections": connections,
                         "download_bytes": rule.get("DownloadBytes", 0),
                         "upload_bytes": rule.get("UploadBytes", 0),
@@ -528,7 +548,7 @@ class LuckyMonitor:
                     })
                     print(f"  📡 规则 {rule_name}: {connections} 个连接")
             
-            print(f"📊 解析到 {len(connections_info)} 个连接规则")
+            print(f"📊 解析到 {len(connections_info)} 个服务/规则")
             return connections_info
             
         except Exception as e:
