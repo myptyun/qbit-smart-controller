@@ -469,6 +469,7 @@ class LuckyMonitor:
                     if connections > 0:
                         connections_info.append({
                             "rule_name": rule_key,
+                            "key": rule_key,  # 添加key字段，用于状态控制匹配
                             "connections": connections,
                             "download_bytes": rule_stats.get("DownloadBytes", 0),
                             "upload_bytes": rule_stats.get("UploadBytes", 0),
@@ -492,6 +493,7 @@ class LuckyMonitor:
                     
                     connections_info.append({
                         "rule_name": rule_name,
+                        "key": rule_name,  # 添加key字段，用于状态控制匹配
                         "connections": connections,
                         "download_bytes": rule.get("DownloadBytes", 0),
                         "upload_bytes": rule.get("UploadBytes", 0),
@@ -689,9 +691,17 @@ class SpeedController:
                     controlled_connections = 0.0
                     
                     for conn in detailed_connections:
+                        # 使用多个可能的服务标识符来匹配控制状态
                         service_key = conn.get("rule_name", "")
-                        # 检查该服务是否启用控制
-                        if self.config_manager.get_service_control_status(service_key):
+                        service_key_alt = conn.get("key", "")  # 备用标识符
+                        
+                        # 检查该服务是否启用控制（尝试多个标识符）
+                        is_controlled = (
+                            self.config_manager.get_service_control_status(service_key) or
+                            self.config_manager.get_service_control_status(service_key_alt)
+                        )
+                        
+                        if is_controlled:
                             controlled_connections += conn.get("connections", 0)
                     
                     # 应用设备权重
