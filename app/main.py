@@ -707,13 +707,17 @@ class SpeedController:
                         service_key = conn.get("rule_name", "")
                         service_key_alt = conn.get("key", "")  # 备用标识符
                         
-                        # 检查该服务是否启用控制（尝试多个标识符）
-                        is_controlled = (
-                            self.config_manager.get_service_control_status(service_key) or
-                            self.config_manager.get_service_control_status(service_key_alt)
+                        # 检查服务控制状态（与_check_enabled_services保持一致）：
+                        # 1. 如果明确设置为false，则禁用
+                        # 2. 如果明确设置为true，则启用
+                        # 3. 如果未设置，则默认启用
+                        service_control = self.config_manager.load_service_control()
+                        is_disabled = (
+                            (service_key in service_control and service_control[service_key] == False) or
+                            (service_key_alt in service_control and service_control[service_key_alt] == False)
                         )
                         
-                        if is_controlled:
+                        if not is_disabled:
                             controlled_connections += conn.get("connections", 0)
                     
                     # 应用设备权重
