@@ -1223,8 +1223,8 @@
                                         console.log(`Locations resolved:`, locations);
                                         console.log(`Domains resolved:`, domains);
                                         
-                                        // 获取控制状态，默认为启用
-                                        const controlEnabled = serviceControlStatus[proxy.Key] !== false;
+                                        // 获取控制状态，默认为禁用（避免意外触发限速）
+                                        const controlEnabled = serviceControlStatus[proxy.Key] === true;
                                         
                                         proxyServices.push({
                                             device_name: device.device_name,
