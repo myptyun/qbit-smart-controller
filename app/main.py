@@ -728,8 +728,9 @@ class SpeedController:
         return total
     
     async def _check_enabled_services(self, config: dict) -> bool:
-        """检查是否有启用的服务控制状态"""
+        """检查是否有明确启用的服务控制状态"""
         devices = config.get("lucky_devices", [])
+        service_control = self.config_manager.load_service_control()
         
         for device in devices:
             if not device.get("enabled", True):
@@ -744,19 +745,21 @@ class SpeedController:
                         service_key = conn.get("rule_name", "")
                         service_key_alt = conn.get("key", "")
                         
-                        # 检查该服务是否启用控制
-                        is_controlled = (
-                            self.config_manager.get_service_control_status(service_key) or
-                            self.config_manager.get_service_control_status(service_key_alt)
+                        # 只检查明确设置为启用的服务（在配置文件中存在且为True）
+                        is_explicitly_enabled = (
+                            (service_key in service_control and service_control[service_key] == True) or
+                            (service_key_alt in service_control and service_control[service_key_alt] == True)
                         )
                         
-                        if is_controlled:
-                            logger.debug(f"✅ 发现启用的服务: {service_key or service_key_alt}")
+                        if is_explicitly_enabled:
+                            logger.info(f"✅ 发现明确启用的服务: {service_key or service_key_alt}")
                             return True
+                        else:
+                            logger.debug(f"❌ 服务未明确启用: {service_key or service_key_alt} (状态: {service_control.get(service_key or service_key_alt, '未设置')})")
             except Exception as e:
                 logger.error(f"❌ 检查设备 {device.get('name')} 启用服务失败: {e}")
         
-        logger.debug("❌ 没有发现启用的服务")
+        logger.info("❌ 没有发现明确启用的服务")
         return False
     
     async def _apply_limited_mode(self, settings: dict):
