@@ -695,10 +695,25 @@ class SpeedController:
                     device_connections = 0.0
                     
                     if device_enabled:
-                        # 设备启用：累加所有服务的连接数
+                        # 设备启用：只累加启用控制的服务连接数
+                        service_control = self.config_manager.load_service_control()
                         for conn in detailed_connections:
-                            device_connections += conn.get("connections", 0)
-                        logger.info(f"📊 {device.get('name')} - 设备启用，连接数: {device_connections}")
+                            service_key = conn.get("rule_name", "")
+                            service_key_alt = conn.get("key", "")
+                            
+                            # 检查服务是否被禁用
+                            is_service_disabled = (
+                                (service_key in service_control and service_control[service_key] == False) or
+                                (service_key_alt in service_control and service_control[service_key_alt] == False)
+                            )
+                            
+                            if not is_service_disabled:
+                                device_connections += conn.get("connections", 0)
+                                logger.debug(f"📊 {device.get('name')} - 服务 {service_key or service_key_alt} 启用，连接数: {conn.get('connections', 0)}")
+                            else:
+                                logger.debug(f"📊 {device.get('name')} - 服务 {service_key or service_key_alt} 禁用，连接数: 0")
+                        
+                        logger.info(f"📊 {device.get('name')} - 设备启用，总连接数: {device_connections}")
                     else:
                         # 设备禁用：连接数+0
                         device_connections = 0.0
