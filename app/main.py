@@ -201,8 +201,8 @@ class ConfigManager:
         # 如果服务在内存状态中，使用保存的状态
         if service_key in self._service_control_state:
             return self._service_control_state[service_key]
-        # 新服务默认启用
-        return True
+        # 新服务默认禁用（避免意外触发限速）
+        return False
     
     def set_service_control_status(self, service_key: str, enabled: bool):
         """设置服务控制状态 - 动态处理"""
@@ -221,12 +221,12 @@ class ConfigManager:
         for service in detected_services:
             service_key = service.get("rule_name") or service.get("key", "")
             if service_key and service_key not in self._service_control_state:
-                # 新服务默认启用
-                self._service_control_state[service_key] = True
+                # 新服务默认禁用（避免意外触发限速）
+                self._service_control_state[service_key] = False
                 new_services.append(service_key)
         
         if new_services:
-            print(f"🆕 发现 {len(new_services)} 个新服务: {', '.join(new_services)}")
+            print(f"🆕 发现 {len(new_services)} 个新服务: {', '.join(new_services)} (默认禁用)")
             # 保存新发现的服务状态
             self._save_persisted_service_control()
         
