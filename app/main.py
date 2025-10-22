@@ -728,7 +728,7 @@ class SpeedController:
         return total
     
     async def _check_enabled_services(self, config: dict) -> bool:
-        """检查是否有明确启用的服务控制状态"""
+        """检查是否有启用的服务控制状态"""
         devices = config.get("lucky_devices", [])
         service_control = self.config_manager.load_service_control()
         
@@ -745,21 +745,24 @@ class SpeedController:
                         service_key = conn.get("rule_name", "")
                         service_key_alt = conn.get("key", "")
                         
-                        # 只检查明确设置为启用的服务（在配置文件中存在且为True）
-                        is_explicitly_enabled = (
-                            (service_key in service_control and service_control[service_key] == True) or
-                            (service_key_alt in service_control and service_control[service_key_alt] == True)
+                        # 检查服务控制状态：
+                        # 1. 如果明确设置为false，则禁用
+                        # 2. 如果明确设置为true，则启用
+                        # 3. 如果未设置，则默认启用（保持原有行为）
+                        is_disabled = (
+                            (service_key in service_control and service_control[service_key] == False) or
+                            (service_key_alt in service_control and service_control[service_key_alt] == False)
                         )
                         
-                        if is_explicitly_enabled:
-                            logger.info(f"✅ 发现明确启用的服务: {service_key or service_key_alt}")
+                        if not is_disabled:
+                            logger.info(f"✅ 发现启用的服务: {service_key or service_key_alt} (状态: {service_control.get(service_key or service_key_alt, '默认启用')})")
                             return True
                         else:
-                            logger.debug(f"❌ 服务未明确启用: {service_key or service_key_alt} (状态: {service_control.get(service_key or service_key_alt, '未设置')})")
+                            logger.debug(f"❌ 服务已禁用: {service_key or service_key_alt}")
             except Exception as e:
                 logger.error(f"❌ 检查设备 {device.get('name')} 启用服务失败: {e}")
         
-        logger.info("❌ 没有发现明确启用的服务")
+        logger.info("❌ 没有发现启用的服务")
         return False
     
     async def _apply_limited_mode(self, settings: dict):
