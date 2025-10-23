@@ -448,11 +448,11 @@ class LuckyMonitor:
                         rule_stats.get("ActiveConnections", 0)
                     )
                     
-                    if connections > 0:
-                        total_connections += connections
+                    # 累加所有连接数，包括0
+                    total_connections += connections
                 
-                if total_connections > 0:
-                    return total_connections
+                # 返回总连接数，包括0
+                return total_connections
             
             # 方法2: 从ruleList中提取每个规则的连接信息
             if "ruleList" in data and isinstance(data["ruleList"], list):
@@ -468,11 +468,11 @@ class LuckyMonitor:
                         rule.get("CurrentConnections", 0)
                     )
                     
-                    if connections > 0:
-                        total_connections += connections
+                    # 累加所有连接数，包括0
+                    total_connections += connections
                 
-                if total_connections > 0:
-                    return total_connections
+                # 返回总连接数，包括0
+                return total_connections
             
             # 方法3: 直接从顶层提取总连接数
             if "totalConnections" in data:
@@ -480,7 +480,6 @@ class LuckyMonitor:
                 return total
             
             # 如果所有方法都失败，返回0
-            
             return 0
         except Exception as e:
             print(f"❌ 连接数解析错误: {e}")
