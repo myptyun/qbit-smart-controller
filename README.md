@@ -58,12 +58,28 @@
 └──────────────────┘      └──────────────────┘
 ```
 
-## 📚 文档导航
+## 📚 项目结构
 
-- **[📖 完整手册](MANUAL.md)** - 包含所有配置、部署、维护和故障排除信息
-- **[🔧 自定义路径部署指南](CUSTOM_PATH_DEPLOYMENT.md)** - 适配特定路径的部署说明
-- **[❓ 常见问题解答](FAQ.md)** - 配置、连接、部署等常见问题
-- [🚀 标准部署脚本](deploy_debian.sh) - 首次部署脚本
+```
+qbit-smart-controller/
+├── app/                    # 应用核心
+│   ├── main.py            # 主程序
+│   └── templates/
+│       └── index.html     # Web界面
+├── config/
+│   └── config.yaml        # 主配置文件
+├── data/                  # 数据目录
+│   ├── config/            # 配置数据
+│   └── logs/              # 日志目录
+├── deploy.sh              # 标准部署脚本
+├── diagnose.sh            # 诊断工具
+├── docker-compose.yml     # Docker编排
+├── Dockerfile             # Docker镜像
+├── init_config.sh         # 配置初始化
+├── test_qb_connection.sh  # 连接测试
+├── update.sh              # 更新脚本
+└── version.py             # 版本信息
+```
 
 ## 🛠️ 实用工具脚本
 
@@ -71,7 +87,8 @@
 - **`diagnose.sh`** - 诊断容器和配置问题
 - **`fix_config.sh`** - 快速修复配置问题
 - **`test_qb_connection.sh`** - 测试 qBittorrent 连接和认证
-- **`redeploy.sh`** - 快速重新部署（修复代码bug）
+- **`deploy.sh`** - 标准部署脚本
+- **`update.sh`** - 项目更新脚本
 
 ## 🚀 快速开始
 
@@ -84,7 +101,7 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/qbit-smart-controller.git
+git clone https://github.com/myptyun/qbit-smart-controller.git
 cd qbit-smart-controller
 ```
 
@@ -96,15 +113,22 @@ cd qbit-smart-controller
 # Lucky 设备配置
 lucky_devices:
   - name: "我的Lucky设备"
-    api_url: "http://192.168.1.100:16601/api/webservice/rules?openToken=YOUR_TOKEN"
-    weight: 1.0
+    api_url: "http://192.168.1.100:16601/api/webservice/rules?openToken=YOUR_LUCKY_TOKEN"
+    weight: 1.0  # 权重：1.0=正常，0.5=减半影响，2.0=加倍影响
     enabled: true
     description: "主要监控设备"
+  
+  # 示例：多设备配置（注释掉，需要时取消注释）
+  # - name: "次要Lucky设备"
+  #   api_url: "http://192.168.1.101:16601/api/webservice/rules?openToken=YOUR_SECOND_TOKEN"
+  #   weight: 0.5  # 权重减半，影响较小
+  #   enabled: false
+  #   description: "次要监控设备"
 
 # qBittorrent 实例配置
 qbittorrent_instances:
   - name: "我的QB实例"
-    host: "http://192.168.1.200:8080"
+    host: "http://192.168.1.200:8080"  # 改为您实际的QB地址
     username: "admin"
     password: "your_password"
     enabled: true
@@ -112,16 +136,19 @@ qbittorrent_instances:
 
 # 控制器设置
 controller_settings:
-  poll_interval: 2          # 状态采集频率（秒）
-  limit_on_delay: 5         # 限速触发延迟（秒）
-  limit_off_delay: 30       # 恢复全速延迟（秒）
-  retry_interval: 10        # 重连间隔（秒）
-  
-  # 速度限制 (KB/s)
-  limited_download: 1024    # 限速时的下载速度
-  limited_upload: 512       # 限速时的上传速度
-  normal_download: 0        # 正常时的下载速度 (0=不限速)
-  normal_upload: 0          # 正常时的上传速度 (0=不限速)
+  poll_interval: 1  # 减少到1秒，提高响应速度
+  limit_on_delay: 5
+  limit_off_delay: 30
+  retry_interval: 10
+  limited_download: 1024
+  limited_upload: 512
+  normal_download: 0
+  normal_upload: 0
+
+# Web服务器设置
+web_settings:
+  host: "0.0.0.0"  # 绑定到所有网络接口，允许外部访问
+  port: 5000       # 服务端口
 ```
 
 ### 3. 启动服务
@@ -143,34 +170,30 @@ docker-compose down
 
 ## 🔄 更新项目
 
-### 快速更新（推荐）
+### 标准更新
 
 适用于日常代码更新：
-
-```bash
-cd ~/qbit-smart-controller
-./quick_update.sh
-```
-
-### 完整更新
-
-适用于有 Docker 配置或依赖变更：
 
 ```bash
 cd ~/qbit-smart-controller
 ./update.sh
 ```
 
-### 完全重置
+### 重新部署
 
 遇到问题时使用：
 
 ```bash
 cd ~/qbit-smart-controller
-./reset.sh
+./deploy.sh
 ```
 
-**详细说明请查看：[完整手册](MANUAL.md)**
+### 诊断问题
+
+```bash
+cd ~/qbit-smart-controller
+./diagnose.sh
+```
 
 ## 📖 详细说明
 
@@ -190,7 +213,7 @@ cd ~/qbit-smart-controller
 1. 登录 Lucky 管理界面
 2. 进入「系统设置」→「API 管理」
 3. 生成或查看 Open Token
-4. API 地址格式：`http://IP:PORT/api/webservice/rules?openToken=YOUR_TOKEN`
+4. API 地址格式：`http://YOUR_LUCKY_IP:16601/api/webservice/rules?openToken=YOUR_LUCKY_TOKEN`
 
 #### qBittorrent 配置
 
@@ -207,6 +230,7 @@ cd ~/qbit-smart-controller
 1. 启用 Web UI：「工具」→「选项」→「Web UI」
 2. 允许远程连接
 3. 记录用户名和密码
+4. 默认端口：8080（可在 qBittorrent 中修改）
 
 #### 控制器设置
 
@@ -252,6 +276,14 @@ cd ~/qbit-smart-controller
 - 设备B：2个连接，权重 0.5 → 贡献 1.0
 - **总计：4.0 个加权连接**
 
+### 前端显示说明
+
+Web界面会智能显示连接数信息：
+
+- **单设备场景**：显示"X个加权连接"（权重为1.0时与原始连接数相同）
+- **多设备场景**：显示"X个加权连接"并显示原始连接数对比
+- **限速状态**：实时显示加权连接数和倒计时信息
+
 ## 🔌 API 接口
 
 ### 状态查询
@@ -296,6 +328,21 @@ POST /api/controller/start
 POST /api/controller/stop
 ```
 
+### 服务控制
+
+```bash
+# 获取所有服务控制状态
+GET /api/services/control
+
+# 更新服务控制状态
+POST /api/services/control
+Content-Type: application/json
+{
+  "service_name": "服务名称",
+  "enabled": true/false
+}
+```
+
 ## 📊 日志管理
 
 ### 日志位置
@@ -304,7 +351,7 @@ POST /api/controller/stop
 data/logs/
 ├── controller.log      # 主日志（10MB，保留5份）
 ├── error.log          # 错误日志（10MB，保留3份）
-└── controller.log.1   # 历史日志
+└── failed_instances.json  # 失败实例记录
 ```
 
 ### 查看日志
@@ -318,6 +365,10 @@ tail -f data/logs/controller.log
 
 # 查看错误日志
 tail -f data/logs/error.log
+
+# 在容器内查看日志
+docker exec -it qbit-smart-controller bash
+tail -f /app/data/logs/controller.log
 ```
 
 ## 🐛 故障排查
@@ -330,7 +381,7 @@ tail -f data/logs/error.log
 1. 检查 Lucky API 地址是否正确
 2. 测试 API 访问：
    ```bash
-   curl "http://YOUR_LUCKY_IP:16601/api/webservice/rules?openToken=YOUR_TOKEN"
+   curl "http://YOUR_LUCKY_IP:16601/api/webservice/rules?openToken=YOUR_LUCKY_TOKEN"
    ```
 3. 检查网络连通性
 4. 验证 Token 是否过期
@@ -345,7 +396,7 @@ tail -f data/logs/error.log
 2. 测试登录：
    ```bash
    curl -X POST "http://YOUR_QB_IP:8080/api/v2/auth/login" \
-     -d "username=admin&password=your_pass"
+     -d "username=admin&password=your_password"
    ```
 3. 检查用户名密码是否正确
 4. 确认允许远程连接
@@ -444,8 +495,8 @@ MIT License
 
 ## 📞 支持
 
-- 问题反馈：[GitHub Issues](https://github.com/yourusername/qbit-smart-controller/issues)
-- 使用文档：[Wiki](https://github.com/yourusername/qbit-smart-controller/wiki)
+- 问题反馈：[GitHub Issues](https://github.com/myptyun/qbit-smart-controller/issues)
+- 使用文档：[Wiki](https://github.com/myptyun/qbit-smart-controller/wiki)
 
 ---
 
