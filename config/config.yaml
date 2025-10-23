@@ -17,7 +17,7 @@ qbittorrent_instances:
     description: "qBittorrent测试"
 
 controller_settings:
-  poll_interval: 2
+  poll_interval: 1  # 减少到1秒，提高响应速度
   limit_on_delay: 5
   limit_off_delay: 30
   retry_interval: 10

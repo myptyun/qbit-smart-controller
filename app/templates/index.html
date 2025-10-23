@@ -983,7 +983,7 @@
                 await this.updateStatus();
                 this.updateInterval = setInterval(() => {
                     this.updateStatus();
-                }, 2000);
+                }, 1000); // 减少到1秒，提高响应速度
             }
 
             async updateStatus() {
