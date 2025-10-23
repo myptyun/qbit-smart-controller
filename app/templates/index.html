@@ -1236,21 +1236,21 @@
                                 let proxyList = ruleList[0].ProxyList || [];
                                 let ruleKey = ruleList[0].RuleKey || '';
                                 
-                                console.log(`Found rule: ${ruleList[0].RuleName} (Key: ${ruleKey})`);
-                                console.log(`Found ${proxyList.length} services in ProxyList`);
+                                // console.log(`Found rule: ${ruleList[0].RuleName} (Key: ${ruleKey})`);
+                                // console.log(`Found ${proxyList.length} services in ProxyList`);
                                 
                                 if (Array.isArray(proxyList)) {
                                     totalServices += proxyList.length;
                                     
                                     proxyList.forEach((proxy, index) => {
-                                        console.log(`=== Processing proxy ${index} ===`);
-                                        console.log('Full proxy object:', JSON.stringify(proxy, null, 2));
-                                        console.log('Service Enable:', proxy.Enable);
-                                        console.log('Service Remark:', proxy.Remark);
-                                        console.log('Service Key:', proxy.Key);
-                                        console.log('Service WebServiceType:', proxy.WebServiceType);
-                                        console.log('Service Locations:', proxy.Locations);
-                                        console.log('Service Domains:', proxy.Domains);
+                                        // console.log(`=== Processing proxy ${index} ===`);
+                                        // console.log('Full proxy object:', JSON.stringify(proxy, null, 2));
+                                        // console.log('Service Enable:', proxy.Enable);
+                                        // console.log('Service Remark:', proxy.Remark);
+                                        // console.log('Service Key:', proxy.Key);
+                                        // console.log('Service WebServiceType:', proxy.WebServiceType);
+                                        // console.log('Service Locations:', proxy.Locations);
+                                        // console.log('Service Domains:', proxy.Domains);
                                         
                                         // 显示所有启用的服务
                                         if (proxy.Enable) {
@@ -1283,9 +1283,9 @@
                                                       proxy.Hosts ||
                                                       [];
                                         
-                                        console.log(`Service name resolved: ${serviceName}`);
-                                        console.log(`Locations resolved:`, locations);
-                                        console.log(`Domains resolved:`, domains);
+                                        // console.log(`Service name resolved: ${serviceName}`);
+                                        // console.log(`Locations resolved:`, locations);
+                                        // console.log(`Domains resolved:`, domains);
                                         
                                         // 获取控制状态，默认为禁用（避免意外触发限速）
                                         const controlEnabled = serviceControlStatus[proxy.Key] === true;
@@ -1316,84 +1316,32 @@
                 }
                 
                 if (proxyServices.length === 0) {
-                    let debugInfo = '';
-                    if (luckyStatus.devices && luckyStatus.devices.length > 0) {
-                        debugInfo = `<br><small class="text-muted">调试信息: 找到 ${luckyStatus.devices.length} 个设备</small>`;
-                        luckyStatus.devices.forEach((device, index) => {
-                            debugInfo += `<br><small class="text-muted">设备${index + 1}: ${device.device_name} - 成功: ${device.success}</small>`;
-                            if (device.raw_data) {
-                                debugInfo += `<br><small class="text-muted">raw_data字段: ${Object.keys(device.raw_data).join(', ')}</small>`;
-                                if (device.raw_data.ruleList) {
-                                    debugInfo += `<br><small class="text-muted">ruleList数量: ${device.raw_data.ruleList.length}</small>`;
-                                    const enabledServices = device.raw_data.ruleList.filter(rule => rule.Enable);
-                                    debugInfo += `<br><small class="text-muted">启用服务数量: ${enabledServices.length}</small>`;
-                                    debugInfo += `<br><small class="text-muted">实际处理服务数量: ${proxyServices.length}</small>`;
-                                }
-                            }
-                        });
-                    }
-                    
+                    // 简化错误显示，减少字符串拼接
                     container.innerHTML = `
                         <div class="text-center py-4 text-muted">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
                             <p>暂无Lucky代理服务数据</p>
                             <p>请检查Lucky设备配置和API连接</p>
-                            ${debugInfo}
                         </div>
                     `;
                     return;
                 }
                 
-                let html = `
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 table-fixed">
-                            <thead>
-                                <tr>
-                                    <th style="width: 20%;">服务名称</th>
-                                    <th style="width: 12%;">状态控制</th>
-                                    <th style="width: 12%;">连接数</th>
-                                    <th style="width: 15%;">下行速度</th>
-                                    <th style="width: 15%;">上行速度</th>
-                                    <th class="target-address-column" style="width: 20%;">
-                                        目标地址
-                                        <button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggleColumn('target-address')" title="隐藏/显示目标地址列">
-                                            <i class="fas ${targetAddressMasked ? 'fa-eye-slash' : 'fa-eye'}" id="target-address-icon"></i>
-                                        </button>
-                                    </th>
-                                    <th class="domain-column" style="width: 20%;">
-                                        域名
-                                        <button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggleColumn('domain')" title="隐藏/显示域名列">
-                                            <i class="fas ${domainMasked ? 'fa-eye-slash' : 'fa-eye'}" id="domain-icon"></i>
-                                        </button>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
+                // 简化表格渲染，减少字符串拼接
+                let html = '<div class="table-responsive"><table class="table table-hover mb-0 table-fixed"><thead><tr>';
+                html += '<th style="width: 20%;">服务名称</th>';
+                html += '<th style="width: 12%;">状态控制</th>';
+                html += '<th style="width: 12%;">连接数</th>';
+                html += '<th style="width: 15%;">下行速度</th>';
+                html += '<th style="width: 15%;">上行速度</th>';
+                html += '<th class="target-address-column" style="width: 20%;">目标地址</th>';
+                html += '<th class="domain-column" style="width: 20%;">域名</th>';
+                html += '</tr></thead><tbody>';
                 
                 proxyServices.forEach((service, index) => {
-                    // 格式化地址显示
-                    const formatLocations = (locations) => {
-                        if (!locations || locations.length === 0) return '无';
-                        return locations.slice(0, 2).join(', ') + (locations.length > 2 ? '...' : '');
-                    };
-                    
-                    // 格式化域名显示
-                    const formatDomains = (domains) => {
-                        if (!domains || domains.length === 0) return '无';
-                        return domains.slice(0, 2).join(', ') + (domains.length > 2 ? '...' : '');
-                    };
-                    
-                    // 获取服务类型图标
-                    const getServiceIcon = (serviceType) => {
-                        switch (serviceType) {
-                            case 'reverseproxy': return 'fas fa-exchange-alt';
-                            case 'fileserver': return 'fas fa-folder-open';
-                            case 'tcp': return 'fas fa-plug';
-                            case 'udp': return 'fas fa-broadcast-tower';
-                            default: return 'fas fa-cog';
-                        }
-                    };
+                    // 简化格式化函数
+                    const formatLocations = (locations) => locations && locations.length > 0 ? locations.slice(0, 2).join(', ') : '无';
+                    const formatDomains = (domains) => domains && domains.length > 0 ? domains.slice(0, 2).join(', ') : '无';
                     
                     html += `
                         <tr>
@@ -1451,7 +1399,7 @@
                 
                 // 内容已在渲染时处理，只需要更新图标状态
                 if (targetAddressMasked || domainMasked) {
-                    console.log('恢复打码状态:', { targetAddressMasked, domainMasked });
+                    // console.log('恢复打码状态:', { targetAddressMasked, domainMasked });
                     // 延迟更新图标状态，确保DOM完全更新
                     setTimeout(() => {
                         if (targetAddressMasked) {
@@ -1659,9 +1607,9 @@
                 const activeConnElement = document.getElementById('active-connections');
                 
                 // 调试信息
-                console.log('Controller state:', controllerState);
-                console.log('Elements found:', {
-                    statusElement: !!statusElement,
+                // console.log('Controller state:', controllerState);
+                // console.log('Elements found:', {
+                //     statusElement: !!statusElement,
                     statusCard: !!statusCard,
                     activeConnElement: !!activeConnElement
                 });
@@ -1785,7 +1733,7 @@
             if (columns.length > 0 && icon) {
                 // 更新全局状态
                 columnMaskingState[columnType] = true;
-                console.log('应用打码状态:', columnType, '全局状态:', columnMaskingState);
+                // console.log('应用打码状态:', columnType, '全局状态:', columnMaskingState);
                 
                 // 应用打码状态
                 columns.forEach(col => {
@@ -1915,7 +1863,7 @@
                 const result = await response.json();
                 window.dashboard.addLog('获取调试配置成功', 'success');
                 alert('调试配置信息已查看，请查看控制台日志');
-                console.log('调试配置:', result);
+                // console.log('调试配置:', result);
             } catch (error) {
                 window.dashboard.addLog('获取调试配置失败: ' + error, 'error');
                 alert('获取调试配置失败: ' + error);
