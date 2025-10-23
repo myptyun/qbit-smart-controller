@@ -726,11 +726,11 @@ class SpeedController:
             # 1. 采集所有 Lucky 设备的连接数
             self.total_connections = await self._collect_total_connections(config)
             
-            # 简化限速逻辑：总连接数 > 0 即触发限速
+            # 加权限速逻辑：加权总连接数 > 0 即触发限速
             has_connections = self.total_connections > 0
             
             # 详细日志显示限速判断条件
-            logger.info(f"🔍 限速判断: 总连接数={self.total_connections:.1f} -> 触发限速={has_connections}")
+            logger.info(f"🔍 限速判断: 加权总连接数={self.total_connections:.1f} -> 触发限速={has_connections}")
             
             # 2. 状态机逻辑
             if has_connections and not self.is_limited:
@@ -738,7 +738,7 @@ class SpeedController:
                 self.limit_timer += poll_interval
                 self.normal_timer = 0
                 
-                logger.info(f"⚠️ 检测到 {self.total_connections:.1f} 个连接，限速倒计时: {self.limit_timer}/{limit_on_delay}秒")
+                logger.info(f"⚠️ 检测到 {self.total_connections:.1f} 个加权连接，限速倒计时: {self.limit_timer}/{limit_on_delay}秒")
                 
                 if self.limit_timer >= limit_on_delay:
                     # 触发限速
@@ -762,7 +762,7 @@ class SpeedController:
             elif has_connections and self.is_limited:
                 # 保持限速状态，重置恢复计时器
                 self.normal_timer = 0
-                logger.debug(f"🔒 保持限速状态，当前连接: {self.total_connections:.1f}")
+                logger.debug(f"🔒 保持限速状态，当前加权连接: {self.total_connections:.1f}")
                 
             else:
                 # 保持正常状态，重置限速计时器
@@ -777,22 +777,26 @@ class SpeedController:
             await asyncio.sleep(5)  # 出错后等待5秒再重试
     
     async def _collect_total_connections(self, config: dict) -> float:
-        """采集所有设备的总连接数（只根据服务级别控制计算）"""
+        """采集所有设备的总连接数（根据服务级别控制和设备权重计算）"""
         devices = config.get("lucky_devices", [])
-        total = 0.0
+        total_weighted_connections = 0.0
+        total_raw_connections = 0.0
         
         for device in devices:
             try:
                 result = await self.lucky_monitor.get_device_connections(device)
                 if result.get("success"):
+                    # 获取设备权重
+                    device_weight = device.get("weight", 1.0)
+                    
                     # 获取详细连接信息
                     detailed_connections = result.get("detailed_connections", [])
-                    device_connections = 0.0
+                    device_raw_connections = 0.0
                     
                     # 首先发现并初始化新服务
                     self.config_manager.discover_and_initialize_services(detailed_connections)
                     
-                    # 只累加启用控制的服务连接数 - 优化版本
+                    # 只累加启用控制的服务连接数
                     service_control_state = self.config_manager.get_all_service_control_status()
                     for conn in detailed_connections:
                         service_name = conn.get("rule_name", "")
@@ -807,18 +811,24 @@ class SpeedController:
                         )
                         
                         if is_service_enabled:
-                            device_connections += conn.get("connections", 0)
+                            device_raw_connections += conn.get("connections", 0)
                         else:
                             logger.debug(f"📊 {device.get('name')} - 服务 {service_name or service_key} 禁用，连接数: 0")
                     
-                    logger.info(f"📊 {device.get('name')} - 总连接数: {device_connections}")
-                    total += device_connections
+                    # 计算加权连接数
+                    device_weighted_connections = device_raw_connections * device_weight
+                    
+                    logger.info(f"📊 {device.get('name')} - 原始连接数: {device_raw_connections}, 权重: {device_weight}, 加权连接数: {device_weighted_connections:.1f}")
+                    
+                    total_raw_connections += device_raw_connections
+                    total_weighted_connections += device_weighted_connections
                     
             except Exception as e:
                 logger.error(f"❌ 采集设备 {device.get('name')} 失败: {e}")
         
-        logger.info(f"📊 总连接数: {total:.1f}")
-        return total
+        # 使用加权连接数进行限速判断，但保留原始连接数用于日志显示
+        logger.info(f"📊 原始总连接数: {total_raw_connections:.1f}, 加权总连接数: {total_weighted_connections:.1f}")
+        return total_weighted_connections
     
     
     async def _apply_limited_mode(self, settings: dict):

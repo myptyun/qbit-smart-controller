@@ -3,9 +3,16 @@
 lucky_devices:
   - name: "我的Lucky设备"
     api_url: "http://192.168.2.3:16601/api/webservice/rules?openToken=S9SXzQAAg03myzAfUsLkiQmTBUUUr3Yn"
-    weight: 1.0
+    weight: 1.0  # 权重：1.0=正常，0.5=减半影响，2.0=加倍影响
     enabled: true
     description: "主要监控设备"
+  
+  # 示例：多设备配置（注释掉，需要时取消注释）
+  # - name: "次要Lucky设备"
+  #   api_url: "http://192.168.2.4:16601/api/webservice/rules?openToken=YOUR_TOKEN"
+  #   weight: 0.5  # 权重减半，影响较小
+  #   enabled: false
+  #   description: "次要监控设备"
 
 # 更新为您的实际qBittorrent地址
 qbittorrent_instances:
