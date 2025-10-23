@@ -983,21 +983,30 @@
                 await this.updateStatus();
                 this.updateInterval = setInterval(() => {
                     this.updateStatus();
-                }, 1000); // 减少到1秒，提高响应速度
+                }, 500); // 减少到500毫秒，大幅提高响应速度
             }
 
             async updateStatus() {
                 try {
-                    this.addLog('开始采集状态数据...', 'info');
                     const [luckyStatus, qbitStatus, controllerState] = await Promise.all([
                         fetch('/api/lucky/status').then(r => r.json()),
                         fetch('/api/qbit/status').then(r => r.json()),
                         fetch('/api/controller/state').then(r => r.json())
                     ]);
 
-
-                    await this.renderDevicesTable(luckyStatus, qbitStatus);
-                    this.updateOverview(luckyStatus, qbitStatus, controllerState);
+                    // 检查数据是否有变化，避免不必要的DOM更新
+                    const currentDataHash = JSON.stringify({
+                        lucky: luckyStatus,
+                        qbit: qbitStatus,
+                        controller: controllerState
+                    });
+                    
+                    if (this._lastDataHash !== currentDataHash) {
+                        await this.renderDevicesTable(luckyStatus, qbitStatus);
+                        this.updateOverview(luckyStatus, qbitStatus, controllerState);
+                        this._lastDataHash = currentDataHash;
+                    }
+                    
                     this.lastUpdate = new Date();
                     
                     const lastUpdateElement = document.getElementById('last-update-time');
@@ -1009,7 +1018,11 @@
                         lastCollectionElement.textContent = this.lastUpdate.toLocaleTimeString('zh-CN');
                     }
                         
-                    this.addLog('状态数据采集完成', 'success');
+                    // 只在首次成功时记录日志，避免频繁日志输出
+                    if (!this._firstUpdateComplete) {
+                        this.addLog('状态数据采集完成', 'success');
+                        this._firstUpdateComplete = true;
+                    }
                 } catch (error) {
                     this.addLog('状态更新失败: ' + error, 'error');
                     console.error('状态更新失败:', error);
