@@ -1595,7 +1595,15 @@ async def update_controller_settings(request: Request):
 
 @app.get("/api/lucky/status")
 async def get_lucky_status():
-    """Lucky设备状态 - 真实API调用"""
+    """Lucky设备状态 - 使用缓存避免频繁API调用"""
+    # 使用缓存，避免频繁调用Lucky API
+    current_time = datetime.now()
+    
+    # 检查缓存是否存在且未过期（5秒缓存）
+    if hasattr(get_lucky_status, '_cache') and hasattr(get_lucky_status, '_cache_time'):
+        if (current_time - get_lucky_status._cache_time).total_seconds() < 5:
+            return get_lucky_status._cache
+    
     print("🔄 开始采集Lucky设备状态...")
     config = config_manager.load_config()
     devices = config.get("lucky_devices", [])
@@ -1605,8 +1613,14 @@ async def get_lucky_status():
         device_status = await lucky_monitor.get_device_connections(device)
         status_data.append(device_status)
     
+    result = {"devices": status_data}
+    
+    # 缓存结果
+    get_lucky_status._cache = result
+    get_lucky_status._cache_time = current_time
+    
     print(f"✅ Lucky状态采集完成: {len(status_data)} 个设备")
-    return {"devices": status_data}
+    return result
 
 @app.get("/api/lucky/connections")
 async def get_lucky_connections():
@@ -1660,7 +1674,15 @@ async def get_lucky_connections():
 
 @app.get("/api/qbit/status")
 async def get_qbit_status():
-    """qBittorrent状态 - 真实API调用"""
+    """qBittorrent状态 - 使用缓存避免频繁API调用"""
+    # 使用缓存，避免频繁调用qBittorrent API
+    current_time = datetime.now()
+    
+    # 检查缓存是否存在且未过期（5秒缓存）
+    if hasattr(get_qbit_status, '_cache') and hasattr(get_qbit_status, '_cache_time'):
+        if (current_time - get_qbit_status._cache_time).total_seconds() < 5:
+            return get_qbit_status._cache
+    
     print("🔄 开始采集QB状态...")
     config = config_manager.load_config()
     instances = config.get("qbittorrent_instances", [])
@@ -1679,8 +1701,14 @@ async def get_qbit_status():
                 "last_update": datetime.now().isoformat()
             })
     
+    result = {"instances": status_data}
+    
+    # 缓存结果
+    get_qbit_status._cache = result
+    get_qbit_status._cache_time = current_time
+    
     print(f"✅ QB状态采集完成: {len(status_data)} 个实例")
-    return {"instances": status_data}
+    return result
 
 @app.get("/api/test/lucky/{device_index}")
 async def test_lucky_connection(device_index: int):
