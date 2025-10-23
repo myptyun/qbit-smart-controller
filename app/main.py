@@ -2066,6 +2066,71 @@ async def get_service_control_status():
         logger.error(f"获取服务控制状态失败: {e}")
         raise HTTPException(status_code=500, detail=f"获取服务控制状态失败: {str(e)}")
 
+@app.get("/api/system/logs")
+async def get_system_logs(lines: int = 50):
+    """获取系统日志"""
+    try:
+        log_file = Path("data/logs/controller.log")
+        if not log_file.exists():
+            return {
+                "success": True,
+                "logs": ["日志文件不存在"]
+            }
+        
+        # 读取最后N行日志
+        with open(log_file, 'r', encoding='utf-8') as f:
+            all_lines = f.readlines()
+            recent_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
+        
+        # 清理和格式化日志
+        formatted_logs = []
+        for line in recent_lines:
+            line = line.strip()
+            if line:
+                # 解析日志格式: 2025-10-23 14:39:09 - qbit-controller - INFO - 📊 Lucky - 总连接数: 0.0
+                parts = line.split(' - ', 3)
+                if len(parts) >= 4:
+                    timestamp = parts[0]
+                    logger_name = parts[1]
+                    level = parts[2]
+                    message = parts[3]
+                    
+                    # 根据日志级别设置颜色
+                    if 'ERROR' in level:
+                        log_type = 'error'
+                    elif 'WARNING' in level:
+                        log_type = 'warning'
+                    elif 'INFO' in level:
+                        log_type = 'info'
+                    else:
+                        log_type = 'debug'
+                    
+                    formatted_logs.append({
+                        "timestamp": timestamp,
+                        "level": level,
+                        "message": message,
+                        "type": log_type
+                    })
+                else:
+                    formatted_logs.append({
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "level": "INFO",
+                        "message": line,
+                        "type": "info"
+                    })
+        
+        return {
+            "success": True,
+            "logs": formatted_logs
+        }
+    except Exception as e:
+        logger.error(f"获取系统日志失败: {e}")
+        return {
+            "success": False,
+            "error": f"获取系统日志失败: {str(e)}",
+            "logs": []
+        }
+
 @app.post("/api/lucky/service-control")
 async def set_service_control_status(request: Request):
     """设置服务控制状态"""

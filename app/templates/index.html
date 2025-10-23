@@ -1043,6 +1043,56 @@
                     `;
                 }
             }
+            
+            updateSystemLogs(systemLogs) {
+                if (!systemLogs || !systemLogs.success || !systemLogs.logs) {
+                    return;
+                }
+                
+                const debugLogsContainer = document.getElementById('debug-logs');
+                if (!debugLogsContainer) {
+                    return;
+                }
+                
+                // 清空现有日志
+                debugLogsContainer.innerHTML = '';
+                
+                // 显示最新的日志（最多显示最后10条）
+                const recentLogs = systemLogs.logs.slice(-10);
+                
+                recentLogs.forEach(log => {
+                    const logEntry = document.createElement('div');
+                    logEntry.className = 'log-entry';
+                    
+                    // 根据日志类型设置样式
+                    let logClass = 'text-muted';
+                    let icon = 'fas fa-info-circle';
+                    
+                    if (log.type === 'error') {
+                        logClass = 'text-danger';
+                        icon = 'fas fa-exclamation-circle';
+                    } else if (log.type === 'warning') {
+                        logClass = 'text-warning';
+                        icon = 'fas fa-exclamation-triangle';
+                    } else if (log.type === 'info') {
+                        logClass = 'text-info';
+                        icon = 'fas fa-info-circle';
+                    }
+                    
+                    logEntry.innerHTML = `
+                        <small class="${logClass}">
+                            <i class="${icon}"></i>
+                            <span class="log-time">${log.timestamp}</span>
+                            <span class="log-message">${log.message}</span>
+                        </small>
+                    `;
+                    
+                    debugLogsContainer.appendChild(logEntry);
+                });
+                
+                // 自动滚动到底部
+                debugLogsContainer.scrollTop = debugLogsContainer.scrollHeight;
+            }
 
             async updateStatus() {
                 try {
@@ -1056,7 +1106,7 @@
                         ]);
                     };
                     
-                    const [luckyStatus, qbitStatus, controllerState] = await Promise.all([
+                    const [luckyStatus, qbitStatus, controllerState, systemLogs] = await Promise.all([
                         fetchWithTimeout('/api/lucky/status').then(r => {
                             if (!r.ok) throw new Error(`Lucky API错误: ${r.status}`);
                             return r.json();
@@ -1067,6 +1117,10 @@
                         }),
                         fetchWithTimeout('/api/controller/state').then(r => {
                             if (!r.ok) throw new Error(`控制器API错误: ${r.status}`);
+                            return r.json();
+                        }),
+                        fetchWithTimeout('/api/system/logs?lines=20').then(r => {
+                            if (!r.ok) throw new Error(`系统日志API错误: ${r.status}`);
                             return r.json();
                         })
                     ]);
@@ -1083,6 +1137,9 @@
                         this.updateOverview(luckyStatus, qbitStatus, controllerState);
                         this._lastDataHash = currentDataHash;
                     }
+                    
+                    // 更新系统日志
+                    this.updateSystemLogs(systemLogs);
                     
                     this.lastUpdate = new Date();
                     
