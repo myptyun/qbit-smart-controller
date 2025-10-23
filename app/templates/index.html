@@ -1440,8 +1440,8 @@
                 html += '<th style="width: 12%;">连接数</th>';
                 html += '<th style="width: 15%;">下行速度</th>';
                 html += '<th style="width: 15%;">上行速度</th>';
-                html += '<th class="target-address-column" style="width: 20%;">目标地址</th>';
-                html += '<th class="domain-column" style="width: 20%;">域名</th>';
+                html += '<th class="target-address-column" style="width: 20%;">目标地址 <i id="target-address-icon" class="fas fa-eye" style="cursor: pointer; margin-left: 5px;" onclick="toggleColumn(\'target-address\')" title="点击切换显示/隐藏"></i></th>';
+                html += '<th class="domain-column" style="width: 20%;">域名 <i id="domain-icon" class="fas fa-eye" style="cursor: pointer; margin-left: 5px;" onclick="toggleColumn(\'domain\')" title="点击切换显示/隐藏"></i></th>';
                 html += '</tr></thead><tbody>';
                 
                 proxyServices.forEach((service, index) => {
