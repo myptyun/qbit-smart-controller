@@ -247,12 +247,21 @@ class ConfigManager:
                     self._service_control_state[name] = False
                     new_services.append(name)
         
+        # 延迟保存，避免频繁文件I/O
         if new_services:
             print(f"🆕 发现 {len(new_services)} 个新服务: {', '.join(new_services)} (默认禁用)")
-            # 保存新发现的服务状态
-            self._save_persisted_service_control()
+            # 异步保存，不阻塞主流程
+            asyncio.create_task(self._async_save_service_control())
         
         return new_services
+    
+    async def _async_save_service_control(self):
+        """异步保存服务控制状态"""
+        try:
+            await asyncio.sleep(0.1)  # 短暂延迟，避免频繁保存
+            self._save_persisted_service_control()
+        except Exception as e:
+            print(f"❌ 异步保存服务控制状态失败: {e}")
 
 class LuckyMonitor:
     def __init__(self, config_manager):
@@ -784,32 +793,22 @@ class SpeedController:
                     # 首先发现并初始化新服务
                     self.config_manager.discover_and_initialize_services(detailed_connections)
                     
-                    # 只累加启用控制的服务连接数
+                    # 只累加启用控制的服务连接数 - 优化版本
+                    service_control_state = self.config_manager.get_all_service_control_status()
                     for conn in detailed_connections:
                         service_name = conn.get("rule_name", "")
                         service_key = conn.get("key", "")
                         service_remark = conn.get("remark", "")
                         
-                        # 尝试多种服务名称匹配
-                        is_service_enabled = False
-                        matched_name = ""
-                        
-                        # 优先使用rule_name（通常是Remark字段）
-                        if service_name and self.config_manager.get_service_control_status(service_name):
-                            is_service_enabled = True
-                            matched_name = service_name
-                        # 其次尝试key字段
-                        elif service_key and self.config_manager.get_service_control_status(service_key):
-                            is_service_enabled = True
-                            matched_name = service_key
-                        # 最后尝试remark字段
-                        elif service_remark and self.config_manager.get_service_control_status(service_remark):
-                            is_service_enabled = True
-                            matched_name = service_remark
+                        # 快速检查是否启用（避免重复字典查找）
+                        is_service_enabled = (
+                            (service_name and service_control_state.get(service_name, False)) or
+                            (service_key and service_control_state.get(service_key, False)) or
+                            (service_remark and service_control_state.get(service_remark, False))
+                        )
                         
                         if is_service_enabled:
                             device_connections += conn.get("connections", 0)
-                            logger.debug(f"📊 {device.get('name')} - 服务 {matched_name} 启用，连接数: {conn.get('connections', 0)}")
                         else:
                             logger.debug(f"📊 {device.get('name')} - 服务 {service_name or service_key} 禁用，连接数: 0")
                     
