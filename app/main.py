@@ -499,8 +499,41 @@ class LuckyMonitor:
             print("🔍 开始解析Lucky详细连接数据...")
             connections_info = []
             
-            # 方法1: 从ProxyList中提取详细信息（主要方法）
-            if "ProxyList" in data and isinstance(data["ProxyList"], list):
+            # 方法1: 从ruleList中的ProxyList提取详细信息（主要方法）
+            if "ruleList" in data and isinstance(data["ruleList"], list):
+                for rule in data["ruleList"]:
+                    rule_key = rule.get("RuleKey", "")
+                    print(f"  📡 规则 {rule_key}: {rule.get('Connections', 0)} 个连接")
+                    
+                    # 从ProxyList中提取每个代理服务
+                    proxy_list = rule.get("ProxyList", [])
+                    if isinstance(proxy_list, list):
+                        for proxy in proxy_list:
+                            service_key = proxy.get("Key", "")
+                            service_remark = proxy.get("Remark", "")
+                            connections = proxy.get("Connections", 0)
+                            service_type = proxy.get("WebServiceType", "unknown")
+                            enabled = proxy.get("Enable", True)
+                            locations = proxy.get("Locations", [])
+                            
+                            # 优先使用Remark字段作为服务名称，如果没有则使用Key字段
+                            service_name = service_remark if service_remark else service_key
+                            
+                            # 无论连接数是否为0，都记录服务信息（用于状态控制）
+                            connections_info.append({
+                                "rule_name": service_name,  # 使用Remark或Key作为服务名称
+                                "key": service_key,         # 保留Key字段作为技术标识符
+                                "remark": service_remark,   # 保留Remark字段
+                                "connections": connections,
+                                "service_type": service_type,
+                                "enabled": enabled,
+                                "locations": locations,
+                                "status": "active" if connections > 0 else "inactive"
+                            })
+                            print(f"    📡 服务 {service_name} (Key: {service_key}): {connections} 个连接 (类型: {service_type})")
+            
+            # 方法2: 兼容旧格式，直接从ProxyList中提取（备用方法）
+            elif "ProxyList" in data and isinstance(data["ProxyList"], list):
                 for proxy in data["ProxyList"]:
                     service_key = proxy.get("Key", "")
                     service_remark = proxy.get("Remark", "")
