@@ -197,10 +197,17 @@ class ConfigManager:
             return False
     
     def get_service_control_status(self, service_key: str) -> bool:
-        """获取服务控制状态 - 动态处理"""
+        """获取服务控制状态 - 动态处理，支持多种服务名称匹配"""
         # 如果服务在内存状态中，使用保存的状态
         if service_key in self._service_control_state:
             return self._service_control_state[service_key]
+        
+        # 尝试模糊匹配（支持大小写不敏感匹配）
+        service_key_lower = service_key.lower()
+        for stored_key, status in self._service_control_state.items():
+            if stored_key.lower() == service_key_lower:
+                return status
+        
         # 新服务默认禁用（避免意外触发限速）
         return False
     
@@ -219,11 +226,26 @@ class ConfigManager:
         """发现并初始化新服务"""
         new_services = []
         for service in detected_services:
-            service_key = service.get("rule_name") or service.get("key", "")
-            if service_key and service_key not in self._service_control_state:
-                # 新服务默认禁用（避免意外触发限速）
-                self._service_control_state[service_key] = False
-                new_services.append(service_key)
+            # 获取可能的服务名称（支持多种字段）
+            service_name = service.get("rule_name", "")
+            service_key = service.get("key", "")
+            service_remark = service.get("remark", "")
+            
+            # 收集所有可能的服务标识符
+            possible_names = []
+            if service_name:
+                possible_names.append(service_name)
+            if service_key:
+                possible_names.append(service_key)
+            if service_remark:
+                possible_names.append(service_remark)
+            
+            # 检查是否有任何名称不在服务控制状态中
+            for name in possible_names:
+                if name and name not in self._service_control_state:
+                    # 新服务默认禁用（避免意外触发限速）
+                    self._service_control_state[name] = False
+                    new_services.append(name)
         
         if new_services:
             print(f"🆕 发现 {len(new_services)} 个新服务: {', '.join(new_services)} (默认禁用)")
@@ -481,22 +503,27 @@ class LuckyMonitor:
             if "ProxyList" in data and isinstance(data["ProxyList"], list):
                 for proxy in data["ProxyList"]:
                     service_key = proxy.get("Key", "")
+                    service_remark = proxy.get("Remark", "")
                     connections = proxy.get("Connections", 0)
                     service_type = proxy.get("WebServiceType", "unknown")
                     enabled = proxy.get("Enable", True)
                     locations = proxy.get("Locations", [])
                     
+                    # 优先使用Remark字段作为服务名称，如果没有则使用Key字段
+                    service_name = service_remark if service_remark else service_key
+                    
                     # 无论连接数是否为0，都记录服务信息（用于状态控制）
                     connections_info.append({
-                        "rule_name": service_key,
-                        "key": service_key,  # 使用Key字段作为唯一标识
+                        "rule_name": service_name,  # 使用Remark或Key作为服务名称
+                        "key": service_key,         # 保留Key字段作为技术标识符
+                        "remark": service_remark,   # 保留Remark字段
                         "connections": connections,
                         "service_type": service_type,
                         "enabled": enabled,
                         "locations": locations,
                         "status": "active" if connections > 0 else "inactive"
                     })
-                    print(f"  📡 服务 {service_key}: {connections} 个连接 (类型: {service_type})")
+                    print(f"  📡 服务 {service_name} (Key: {service_key}): {connections} 个连接 (类型: {service_type})")
             
             # 方法2: 从statistics中提取详细信息（备用方法）
             elif "statistics" in data and data["statistics"]:
@@ -575,13 +602,19 @@ class LuckyMonitor:
                         print(f"  📡 找到 {len(proxy_list)} 个代理服务")
                         
                         for proxy in proxy_list:
+                            service_key = proxy.get("Key", "")
+                            service_remark = proxy.get("Remark", "")
+                            service_name = service_remark if service_remark else service_key
+                            
                             service_info = {
-                                "key": proxy.get("Key", ""),
+                                "key": service_key,
+                                "remark": service_remark,
+                                "name": service_name,  # 添加统一的服务名称字段
                                 "service_type": proxy.get("WebServiceType", "unknown"),
                                 "enabled": proxy.get("Enable", False),
                                 "locations": proxy.get("Locations", []),
                                 "domains": proxy.get("Domains", []),
-                                "Remark": proxy.get("Remark", ""),  # 保持原始字段名
+                                "Remark": service_remark,  # 保持原始字段名以兼容现有代码
                                 "last_error": proxy.get("LastErrMsg", ""),
                                 "cache_enabled": proxy.get("CacheEnabled", False),
                                 "cache_size": proxy.get("CaCheTotalSize", 0),
@@ -598,9 +631,9 @@ class LuckyMonitor:
                             # 只显示启用的服务（不限制display_in_frontend）
                             if service_info["enabled"]:
                                 services_info.append(service_info)
-                                print(f"    ✅ 服务 {service_info['Remark']}: {service_info['service_type']}")
+                                print(f"    ✅ 服务 {service_info['name']}: {service_info['service_type']}")
                             else:
-                                print(f"    ❌ 服务 {service_info['Remark']}: 已禁用")
+                                print(f"    ❌ 服务 {service_info['name']}: 已禁用")
                     else:
                         print(f"  ⚠️ ProxyList 不是数组: {type(proxy_list)}")
             
@@ -737,18 +770,32 @@ class SpeedController:
                     
                     # 只累加启用控制的服务连接数
                     for conn in detailed_connections:
-                        service_key = conn.get("rule_name", "")
-                        service_key_alt = conn.get("key", "")
-                        service_name = service_key or service_key_alt
+                        service_name = conn.get("rule_name", "")
+                        service_key = conn.get("key", "")
+                        service_remark = conn.get("remark", "")
                         
-                        # 使用动态服务控制状态
-                        is_service_enabled = self.config_manager.get_service_control_status(service_key or service_key_alt)
+                        # 尝试多种服务名称匹配
+                        is_service_enabled = False
+                        matched_name = ""
+                        
+                        # 优先使用rule_name（通常是Remark字段）
+                        if service_name and self.config_manager.get_service_control_status(service_name):
+                            is_service_enabled = True
+                            matched_name = service_name
+                        # 其次尝试key字段
+                        elif service_key and self.config_manager.get_service_control_status(service_key):
+                            is_service_enabled = True
+                            matched_name = service_key
+                        # 最后尝试remark字段
+                        elif service_remark and self.config_manager.get_service_control_status(service_remark):
+                            is_service_enabled = True
+                            matched_name = service_remark
                         
                         if is_service_enabled:
                             device_connections += conn.get("connections", 0)
-                            logger.debug(f"📊 {device.get('name')} - 服务 {service_name} 启用，连接数: {conn.get('connections', 0)}")
+                            logger.debug(f"📊 {device.get('name')} - 服务 {matched_name} 启用，连接数: {conn.get('connections', 0)}")
                         else:
-                            logger.debug(f"📊 {device.get('name')} - 服务 {service_name} 禁用，连接数: 0")
+                            logger.debug(f"📊 {device.get('name')} - 服务 {service_name or service_key} 禁用，连接数: 0")
                     
                     logger.info(f"📊 {device.get('name')} - 总连接数: {device_connections}")
                     total += device_connections
