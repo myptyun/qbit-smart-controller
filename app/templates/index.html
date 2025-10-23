@@ -1017,13 +1017,58 @@
                     `;
                 }
             }
+            
+            showErrorState(errorMsg) {
+                // 显示Lucky设备错误状态
+                const luckyContainer = document.getElementById('lucky-table-content');
+                if (luckyContainer) {
+                    luckyContainer.innerHTML = `
+                        <div class="text-center py-4 text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <p>Lucky设备数据加载失败</p>
+                            <small class="text-muted">${errorMsg}</small>
+                        </div>
+                    `;
+                }
+                
+                // 显示qBittorrent实例错误状态
+                const qbitContainer = document.getElementById('qbit-table-content');
+                if (qbitContainer) {
+                    qbitContainer.innerHTML = `
+                        <div class="text-center py-4 text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <p>qBittorrent实例数据加载失败</p>
+                            <small class="text-muted">${errorMsg}</small>
+                        </div>
+                    `;
+                }
+            }
 
             async updateStatus() {
                 try {
+                    // 添加超时和错误处理
+                    const fetchWithTimeout = (url, timeout = 5000) => {
+                        return Promise.race([
+                            fetch(url),
+                            new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('请求超时')), timeout)
+                            )
+                        ]);
+                    };
+                    
                     const [luckyStatus, qbitStatus, controllerState] = await Promise.all([
-                        fetch('/api/lucky/status').then(r => r.json()),
-                        fetch('/api/qbit/status').then(r => r.json()),
-                        fetch('/api/controller/state').then(r => r.json())
+                        fetchWithTimeout('/api/lucky/status').then(r => {
+                            if (!r.ok) throw new Error(`Lucky API错误: ${r.status}`);
+                            return r.json();
+                        }),
+                        fetchWithTimeout('/api/qbit/status').then(r => {
+                            if (!r.ok) throw new Error(`qBittorrent API错误: ${r.status}`);
+                            return r.json();
+                        }),
+                        fetchWithTimeout('/api/controller/state').then(r => {
+                            if (!r.ok) throw new Error(`控制器API错误: ${r.status}`);
+                            return r.json();
+                        })
                     ]);
 
                     // 检查数据是否有变化，避免不必要的DOM更新
@@ -1056,8 +1101,12 @@
                         this._firstUpdateComplete = true;
                     }
                 } catch (error) {
-                    this.addLog('状态更新失败: ' + error, 'error');
+                    const errorMsg = `状态更新失败: ${error.message || error}`;
+                    this.addLog(errorMsg, 'error');
                     console.error('状态更新失败:', error);
+                    
+                    // 显示错误状态
+                    this.showErrorState(errorMsg);
                 }
             }
 
