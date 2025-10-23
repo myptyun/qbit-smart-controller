@@ -1716,9 +1716,9 @@
                 // console.log('Controller state:', controllerState);
                 // console.log('Elements found:', {
                 //     statusElement: !!statusElement,
-                    statusCard: !!statusCard,
-                    activeConnElement: !!activeConnElement
-                });
+                //     statusCard: !!statusCard,
+                //     activeConnElement: !!activeConnElement
+                // });
                 
                 if (statusElement && statusCard && activeConnElement) {
                     if (controllerState) {
@@ -1754,7 +1754,7 @@
                 }
                     
                 // 更新服务状态（如果元素存在）
-                    const serviceStatus = document.getElementById('service-status');
+                const serviceStatus = document.getElementById('service-status');
                 if (serviceStatus && controllerState) {
                     if (controllerState.running) {
                         serviceStatus.className = 'badge bg-success';
