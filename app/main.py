@@ -342,7 +342,6 @@ class LuckyMonitor:
                     logger.info(f"🔄 {device_config['name']} - 重试采集数据 (尝试 {attempt + 1}/{max_retries})")
                     await asyncio.sleep(2 * attempt)  # 指数退避
                 else:
-                    print(f"🔍 采集Lucky数据: {device_config['name']}")
                 
                 async with session.get(api_url) as response:
                     if response.status == 200:
@@ -350,7 +349,6 @@ class LuckyMonitor:
                         connections = self._parse_connections(data)
                         weighted_connections = connections * device_config.get("weight", 1.0)
                         
-                        print(f"📊 {device_config['name']} - 连接数: {connections}, 加权: {weighted_connections}")
                         
                         # 解析详细的连接信息和服务信息
                         detailed_connections = self._parse_detailed_connections(data)
@@ -429,8 +427,6 @@ class LuckyMonitor:
     def _parse_connections(self, data: dict) -> int:
         """解析Lucky API响应，提取连接数"""
         try:
-            print("🔍 开始解析Lucky连接数据...")
-            print(f"📦 API响应数据结构: {list(data.keys())}")
             
             # 方法1: 从statistics中提取（优先，最准确）
             if "statistics" in data and data["statistics"]:
@@ -446,10 +442,8 @@ class LuckyMonitor:
                     
                     if connections > 0:
                         total_connections += connections
-                        print(f"  📡 规则 {rule_key}: {connections} 个连接")
                 
                 if total_connections > 0:
-                    print(f"📊 总连接数 (statistics): {total_connections}")
                     return total_connections
             
             # 方法2: 从ruleList中提取每个规则的连接信息
@@ -468,23 +462,16 @@ class LuckyMonitor:
                     
                     if connections > 0:
                         total_connections += connections
-                        print(f"  📡 规则 {rule_name}: {connections} 个连接")
                 
                 if total_connections > 0:
-                    print(f"📊 总连接数 (ruleList): {total_connections}")
                     return total_connections
-                else:
-                    print(f"⚠️ 规则列表中未找到连接数，规则数量: {len(data['ruleList'])}")
             
             # 方法3: 直接从顶层提取总连接数
             if "totalConnections" in data:
                 total = data["totalConnections"]
-                print(f"📊 总连接数 (直接): {total}")
                 return total
             
-            # 如果所有方法都失败，记录完整结构以便调试
-            print("⚠️ 未找到连接数据，完整数据结构:")
-            print(f"  {json.dumps(data, indent=2, ensure_ascii=False)[:500]}...")
+            # 如果所有方法都失败，返回0
             
             return 0
         except Exception as e:
@@ -496,14 +483,12 @@ class LuckyMonitor:
     def _parse_detailed_connections(self, data: dict) -> list:
         """解析Lucky API响应，提取详细的连接信息"""
         try:
-            print("🔍 开始解析Lucky详细连接数据...")
             connections_info = []
             
             # 方法1: 从ruleList中的ProxyList提取详细信息（主要方法）
             if "ruleList" in data and isinstance(data["ruleList"], list):
                 for rule in data["ruleList"]:
                     rule_key = rule.get("RuleKey", "")
-                    print(f"  📡 规则 {rule_key}: {rule.get('Connections', 0)} 个连接")
                     
                     # 从ProxyList中提取每个代理服务
                     proxy_list = rule.get("ProxyList", [])
@@ -540,7 +525,6 @@ class LuckyMonitor:
                                 "locations": locations,
                                 "status": "active" if final_connections > 0 else "inactive"
                             })
-                            print(f"    📡 服务 {service_name} (Key: {service_key}): {final_connections} 个连接 (类型: {service_type})")
             
             # 方法2: 兼容旧格式，直接从ProxyList中提取（备用方法）
             elif "ProxyList" in data and isinstance(data["ProxyList"], list):
@@ -566,7 +550,6 @@ class LuckyMonitor:
                         "locations": locations,
                         "status": "active" if connections > 0 else "inactive"
                     })
-                    print(f"  📡 服务 {service_name} (Key: {service_key}): {connections} 个连接 (类型: {service_type})")
             
             # 方法2: 从statistics中提取详细信息（备用方法）
             elif "statistics" in data and data["statistics"]:
@@ -630,19 +613,16 @@ class LuckyMonitor:
     def _parse_lucky_services(self, data: dict) -> list:
         """解析Lucky API响应，提取服务信息"""
         try:
-            print("🔍 开始解析Lucky服务数据...")
             services_info = []
             
             # 从ruleList中提取服务信息
             if "ruleList" in data and isinstance(data["ruleList"], list):
                 for rule in data["ruleList"]:
                     rule_key = rule.get("RuleKey", "")
-                    print(f"📋 处理规则: {rule.get('RuleName', 'Unknown')} (Key: {rule_key})")
                     
                     # 从ProxyList中提取每个代理服务
                     proxy_list = rule.get("ProxyList", [])
                     if isinstance(proxy_list, list):
-                        print(f"  📡 找到 {len(proxy_list)} 个代理服务")
                         
                         for proxy in proxy_list:
                             service_key = proxy.get("Key", "")
@@ -674,13 +654,9 @@ class LuckyMonitor:
                             # 只显示启用的服务（不限制display_in_frontend）
                             if service_info["enabled"]:
                                 services_info.append(service_info)
-                                print(f"    ✅ 服务 {service_info['name']}: {service_info['service_type']}")
                             else:
-                                print(f"    ❌ 服务 {service_info['name']}: 已禁用")
                     else:
-                        print(f"  ⚠️ ProxyList 不是数组: {type(proxy_list)}")
             
-            print(f"📊 解析到 {len(services_info)} 个启用的服务信息")
             return services_info
             
         except Exception as e:
