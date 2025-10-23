@@ -339,7 +339,7 @@ class LuckyMonitor:
             }
     
     async def get_device_connections(self, device_config: dict, max_retries: int = 2):
-        """获取Lucky设备连接数 - 带重试机制"""
+        """获取Lucky设备连接数 - 带重试机制和超时控制"""
         for attempt in range(max_retries):
             try:
                 session = await self.get_session()
@@ -349,7 +349,9 @@ class LuckyMonitor:
                     logger.info(f"🔄 {device_config['name']} - 重试采集数据 (尝试 {attempt + 1}/{max_retries})")
                     await asyncio.sleep(2 * attempt)  # 指数退避
                 
-                async with session.get(api_url) as response:
+                # 设置更短的超时时间，快速失败
+                timeout = aiohttp.ClientTimeout(total=8, connect=3, sock_read=5)
+                async with session.get(api_url, timeout=timeout) as response:
                     if response.status == 200:
                         data = await response.json()
                         connections = self._parse_connections(data)
@@ -1608,19 +1610,29 @@ async def get_lucky_status():
     config = config_manager.load_config()
     devices = config.get("lucky_devices", [])
     
-    status_data = []
-    for device in devices:
-        device_status = await lucky_monitor.get_device_connections(device)
-        status_data.append(device_status)
-    
-    result = {"devices": status_data}
-    
-    # 缓存结果
-    get_lucky_status._cache = result
-    get_lucky_status._cache_time = current_time
-    
-    print(f"✅ Lucky状态采集完成: {len(status_data)} 个设备")
-    return result
+    try:
+        status_data = []
+        for device in devices:
+            device_status = await lucky_monitor.get_device_connections(device)
+            status_data.append(device_status)
+        
+        result = {"devices": status_data}
+        
+        # 缓存结果
+        get_lucky_status._cache = result
+        get_lucky_status._cache_time = current_time
+        
+        print(f"✅ Lucky状态采集完成: {len(status_data)} 个设备")
+        return result
+    except Exception as e:
+        print(f"❌ Lucky状态采集失败: {e}")
+        # 如果采集失败，返回旧的缓存数据（如果有的话）
+        if hasattr(get_lucky_status, '_cache'):
+            print("🔄 使用缓存的Lucky状态数据")
+            return get_lucky_status._cache
+        else:
+            # 如果没有缓存，返回错误状态
+            return {"devices": [{"success": False, "error": f"采集失败: {str(e)}"}]}
 
 @app.get("/api/lucky/connections")
 async def get_lucky_connections():
@@ -1683,32 +1695,42 @@ async def get_qbit_status():
         if (current_time - get_qbit_status._cache_time).total_seconds() < 5:
             return get_qbit_status._cache
     
-    print("🔄 开始采集QB状态...")
-    config = config_manager.load_config()
-    instances = config.get("qbittorrent_instances", [])
-    
-    status_data = []
-    for instance in instances:
-        if instance.get("enabled", True):
-            instance_status = await qbit_manager.get_instance_status(instance)
-            status_data.append(instance_status)
+    try:
+        print("🔄 开始采集QB状态...")
+        config = config_manager.load_config()
+        instances = config.get("qbittorrent_instances", [])
+        
+        status_data = []
+        for instance in instances:
+            if instance.get("enabled", True):
+                instance_status = await qbit_manager.get_instance_status(instance)
+                status_data.append(instance_status)
+            else:
+                status_data.append({
+                    "success": False,
+                    "instance_name": instance["name"],
+                    "status": "disabled",
+                    "error": "实例已禁用",
+                    "last_update": datetime.now().isoformat()
+                })
+        
+        result = {"instances": status_data}
+        
+        # 缓存结果
+        get_qbit_status._cache = result
+        get_qbit_status._cache_time = current_time
+        
+        print(f"✅ QB状态采集完成: {len(status_data)} 个实例")
+        return result
+    except Exception as e:
+        print(f"❌ QB状态采集失败: {e}")
+        # 如果采集失败，返回旧的缓存数据（如果有的话）
+        if hasattr(get_qbit_status, '_cache'):
+            print("🔄 使用缓存的QB状态数据")
+            return get_qbit_status._cache
         else:
-            status_data.append({
-                "success": False,
-                "instance_name": instance["name"],
-                "status": "disabled",
-                "error": "实例已禁用",
-                "last_update": datetime.now().isoformat()
-            })
-    
-    result = {"instances": status_data}
-    
-    # 缓存结果
-    get_qbit_status._cache = result
-    get_qbit_status._cache_time = current_time
-    
-    print(f"✅ QB状态采集完成: {len(status_data)} 个实例")
-    return result
+            # 如果没有缓存，返回错误状态
+            return {"instances": [{"success": False, "error": f"采集失败: {str(e)}"}]}
 
 @app.get("/api/test/lucky/{device_index}")
 async def test_lucky_connection(device_index: int):

@@ -1096,8 +1096,8 @@
 
             async updateStatus() {
                 try {
-                    // 添加超时和错误处理
-                    const fetchWithTimeout = (url, timeout = 5000) => {
+                    // 添加超时和错误处理 - 增加超时时间
+                    const fetchWithTimeout = (url, timeout = 10000) => {
                         return Promise.race([
                             fetch(url),
                             new Promise((_, reject) => 
