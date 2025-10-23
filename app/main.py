@@ -265,16 +265,16 @@ class LuckyMonitor:
         if self.session is None or self.session.closed:
             # 配置连接池和超时 - 增强连接韧性
             timeout = aiohttp.ClientTimeout(
-                total=20,           # 总超时增加到20秒
-                connect=8,          # 连接超时增加到8秒
-                sock_read=12,       # 读取超时增加到12秒
-                sock_connect=8      # 套接字连接超时
+                total=5,            # 减少总超时到5秒，快速失败
+                connect=3,          # 连接超时减少到3秒
+                sock_read=4,        # 读取超时减少到4秒
+                sock_connect=3      # 套接字连接超时减少到3秒
             )
             connector = aiohttp.TCPConnector(
                 verify_ssl=False,
                 limit=15,           # 连接池大小增加到15
                 limit_per_host=8,   # 每个主机的连接数增加到8
-                ttl_dns_cache=300,  # DNS 缓存时间（秒）
+                ttl_dns_cache=60,   # DNS 缓存时间减少到60秒
                 force_close=False,  # 复用连接
                 enable_cleanup_closed=True,
                 keepalive_timeout=60,  # Keep-Alive 超时
@@ -322,7 +322,7 @@ class LuckyMonitor:
             return {
                 "success": False,
                 "status": "timeout",
-                "message": "连接超时 (15秒)"
+                "message": "连接超时 (5秒)"
             }
         except Exception as e:
             return {
@@ -331,7 +331,7 @@ class LuckyMonitor:
                 "message": f"连接失败: {str(e)}"
             }
     
-    async def get_device_connections(self, device_config: dict, max_retries: int = 3):
+    async def get_device_connections(self, device_config: dict, max_retries: int = 2):
         """获取Lucky设备连接数 - 带重试机制"""
         for attempt in range(max_retries):
             try:
