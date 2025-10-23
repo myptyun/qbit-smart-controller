@@ -2,9 +2,9 @@
 
 lucky_devices:
   - name: "我的Lucky设备"
-    api_url: "http://192.168.1.100:16601/api/webservice/rules?openToken=YOUR_LUCKY_OPEN_TOKEN_HERE"
-    weight: 5.0
-    enabled: false
+    api_url: "http://192.168.2.3:16601/api/webservice/rules?openToken=S9SXzQAAg03myzAfUsLkiQmTBUUUr3Yn"
+    weight: 1.0
+    enabled: true
     description: "主要监控设备"
 
 # 更新为您的实际qBittorrent地址
