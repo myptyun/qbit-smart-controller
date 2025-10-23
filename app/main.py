@@ -283,12 +283,8 @@ class LuckyMonitor:
                 verify_ssl=False,
                 limit=15,           # 连接池大小增加到15
                 limit_per_host=8,   # 每个主机的连接数增加到8
-                ttl_dns_cache=60,   # DNS缓存时间减少到60秒
-                force_close=False,  # 允许连接复用
                 enable_cleanup_closed=True,
-                keepalive_timeout=30,  # Keep-Alive超时30秒
-                family=0,  # 允许IPv4和IPv6
-                use_dns_cache=True  # 启用DNS缓存
+                family=0  # 允许IPv4和IPv6
             )
             # 禁用代理，避免代理问题影响Lucky设备连接
             self.session = aiohttp.ClientSession(
@@ -1029,12 +1025,8 @@ class QBittorrentManager:
                 verify_ssl=False,
                 limit=25,           # 连接池大小增加到25
                 limit_per_host=12,  # 每个主机的连接数增加到12
-                ttl_dns_cache=60,   # DNS缓存时间减少到60秒
-                force_close=False,  # 允许连接复用
                 enable_cleanup_closed=True,
-                keepalive_timeout=30,  # Keep-Alive超时30秒
-                family=0,  # 允许IPv4和IPv6
-                use_dns_cache=True  # 启用DNS缓存
+                family=0  # 允许IPv4和IPv6
             )
             # 禁用代理，避免代理问题影响qBittorrent连接
             self.session = aiohttp.ClientSession(
