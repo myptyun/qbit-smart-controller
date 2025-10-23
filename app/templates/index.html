@@ -980,10 +980,42 @@
             }
 
             async startStatusUpdates() {
+                // 立即显示加载状态，避免空白页面
+                this.showLoadingState();
+                
+                // 开始状态更新
                 await this.updateStatus();
                 this.updateInterval = setInterval(() => {
                     this.updateStatus();
                 }, 500); // 减少到500毫秒，大幅提高响应速度
+            }
+            
+            showLoadingState() {
+                // 显示Lucky设备加载状态
+                const luckyContainer = document.getElementById('lucky-table-content');
+                if (luckyContainer) {
+                    luckyContainer.innerHTML = `
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-success" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-2 text-muted">正在加载Lucky设备数据...</p>
+                        </div>
+                    `;
+                }
+                
+                // 显示qBittorrent实例加载状态
+                const qbitContainer = document.getElementById('qbit-table-content');
+                if (qbitContainer) {
+                    qbitContainer.innerHTML = `
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-2 text-muted">正在加载qBittorrent实例数据...</p>
+                        </div>
+                    `;
+                }
             }
 
             async updateStatus() {
@@ -1153,22 +1185,34 @@
                 // 保存当前的打码状态 - 使用全局状态
                 const targetAddressMasked = columnMaskingState['target-address'];
                 const domainMasked = columnMaskingState['domain'];
-                console.log('保存打码状态:', { targetAddressMasked, domainMasked, globalState: columnMaskingState });
                 
-                // 获取服务控制状态
+                // 获取服务控制状态 - 使用缓存避免重复请求
                 let serviceControlStatus = {};
-                try {
-                    const response = await fetch('/api/lucky/service-control');
-                    if (response.ok) {
-                        const data = await response.json();
-                        serviceControlStatus = data.service_control || {};
+                if (!this._serviceControlCache || Date.now() - this._serviceControlCache.timestamp > 5000) {
+                    try {
+                        const response = await fetch('/api/lucky/service-control');
+                        if (response.ok) {
+                            const data = await response.json();
+                            serviceControlStatus = data.service_control || {};
+                            this._serviceControlCache = {
+                                data: serviceControlStatus,
+                                timestamp: Date.now()
+                            };
+                        }
+                    } catch (error) {
+                        console.warn('获取服务控制状态失败:', error);
+                        // 使用缓存的数据
+                        if (this._serviceControlCache) {
+                            serviceControlStatus = this._serviceControlCache.data;
+                        }
                     }
-                } catch (error) {
-                    console.warn('获取服务控制状态失败:', error);
+                } else {
+                    // 使用缓存的数据
+                    serviceControlStatus = this._serviceControlCache.data;
                 }
                 
-                // 调试信息：打印接收到的数据结构
-                console.log('Lucky Status Data:', luckyStatus);
+                // 调试信息：打印接收到的数据结构（仅在开发模式下）
+                // console.log('Lucky Status Data:', luckyStatus);
                 
                 // 处理Lucky设备，提取ProxyList中的详细服务信息
                 if (luckyStatus.devices && luckyStatus.devices.length > 0) {
@@ -1176,16 +1220,16 @@
                     let enabledServices = 0;
                     
                     luckyStatus.devices.forEach(device => {
-                        console.log('Device:', device);
-                        console.log('Device raw_data:', device.raw_data);
+                        // console.log('Device:', device);
+                        // console.log('Device raw_data:', device.raw_data);
                         
                         if (device.success && device.raw_data) {
                             // 使用正确的数据结构：ruleList[0].ProxyList
                             let ruleList = device.raw_data.ruleList;
                             let statistics = device.raw_data.statistics || {};
                             
-                            console.log('RuleList found:', ruleList);
-                            console.log('Statistics found:', statistics);
+                            // console.log('RuleList found:', ruleList);
+                            // console.log('Statistics found:', statistics);
                             
                             if (Array.isArray(ruleList) && ruleList.length > 0) {
                                 // 从第一个规则中获取ProxyList
@@ -1217,7 +1261,7 @@
                                         const proxyStats = ruleStats.ProxyList || {};
                                         const stats = proxyStats[proxyKey] || {};
                                         
-                                        console.log(`Statistics for ${proxyKey}:`, stats);
+                                        // console.log(`Statistics for ${proxyKey}:`, stats);
                                         
                                         // 尝试不同的字段名获取服务名称
                                         const serviceName = proxy.Remark || 
