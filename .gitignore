@@ -22,36 +22,49 @@ wheels/
 
 # Virtual Environment
 venv/
-ENV/
 env/
+ENV/
 
-# IDEs
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # Logs
-data/logs/*.log
-data/logs/*.log.*
 *.log
+logs/
 
-# Config (保留示例文件)
-config/config.yaml
-data/config/settings.json
-data/config/settings.json.bak
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
 
-# Docker
-docker-compose.override.yml
+# Test files
+test_*.py
+debug_*.py
+check_*.py
+analyze_*.py
+simple_*.py
+comprehensive_*.py
+final_*.py
+simulation_*.py
+verify_*.py
+explain_*.py
+service_mapping_*.py
+service_matching_*.py
+remote_*.py
+ssh_*.py
+diagnose_*.py
+
+# API responses
+lucky_api_response.json
+
+# Deployment temp
+deployment_temp/
+*.zip
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Temporary files
-*.tmp
-*.bak
-*.swp
-.cache/
-

@@ -1,0 +1,32 @@
+# 智能 qBittorrent 限速控制器配置
+
+lucky_devices:
+  - name: "我的Lucky设备"
+    api_url: "http://192.168.1.100:16601/api/webservice/rules?openToken=YOUR_LUCKY_OPEN_TOKEN_HERE"
+    weight: 5.0
+    enabled: false
+    description: "主要监控设备"
+
+# 更新为您的实际qBittorrent地址
+qbittorrent_instances:
+  - name: "我的QB实例"
+    host: "http://192.168.1.101:8080"  # 改为您实际的QB地址
+    username: "admin"
+    password: "adminadmin"
+    enabled: true
+    description: "qBittorrent测试"
+
+controller_settings:
+  poll_interval: 2
+  limit_on_delay: 5
+  limit_off_delay: 30
+  retry_interval: 10
+  limited_download: 1024
+  limited_upload: 512
+  normal_download: 0
+  normal_upload: 0
+
+# Web服务器设置
+web_settings:
+  host: "0.0.0.0"  # 绑定到所有网络接口，允许外部访问
+  port: 5000       # 服务端口
