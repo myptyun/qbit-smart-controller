@@ -341,7 +341,6 @@ class LuckyMonitor:
                 if attempt > 0:
                     logger.info(f"🔄 {device_config['name']} - 重试采集数据 (尝试 {attempt + 1}/{max_retries})")
                     await asyncio.sleep(2 * attempt)  # 指数退避
-                else:
                 
                 async with session.get(api_url) as response:
                     if response.status == 200:
@@ -654,8 +653,6 @@ class LuckyMonitor:
                             # 只显示启用的服务（不限制display_in_frontend）
                             if service_info["enabled"]:
                                 services_info.append(service_info)
-                            else:
-                    else:
             
             return services_info
             
