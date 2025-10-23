@@ -1723,20 +1723,31 @@
                 if (statusElement && statusCard && activeConnElement) {
                     if (controllerState) {
                         const isLimited = controllerState.is_limited;
-                        const totalConnections = controllerState.total_connections || 0;
+                        const totalConnections = controllerState.total_connections || 0;  // 加权连接数
+                        const totalRawConnections = controllerState.total_raw_connections || 0;  // 原始连接数
                         const limitTimer = controllerState.limit_timer || 0;
                         const normalTimer = controllerState.normal_timer || 0;
                         
                         if (isLimited) {
                             statusElement.textContent = '限速中';
                             statusCard.className = 'overview-card system-status-card limit-active';
-                            activeConnElement.textContent = `${totalConnections.toFixed(1)} 个连接`;
+                            // 如果原始连接数和加权连接数不同，显示详细信息
+                            if (Math.abs(totalConnections - totalRawConnections) > 0.1) {
+                                activeConnElement.innerHTML = `${totalConnections.toFixed(1)} 个加权连接<br><small>原始: ${totalRawConnections.toFixed(1)}</small>`;
+                            } else {
+                                activeConnElement.textContent = `${totalConnections.toFixed(1)} 个连接`;
+                            }
                         } else {
                             statusElement.textContent = '正常';
                             statusCard.className = 'overview-card system-status-card limit-inactive';
                             
                             if (totalConnections > 0) {
-                                activeConnElement.innerHTML = `检测到连接<br>倒计时 ${limitTimer.toFixed(0)}s`;
+                                // 如果原始连接数和加权连接数不同，显示详细信息
+                                if (Math.abs(totalConnections - totalRawConnections) > 0.1) {
+                                    activeConnElement.innerHTML = `检测到加权连接 ${totalConnections.toFixed(1)}<br>倒计时 ${limitTimer.toFixed(0)}s<br><small>原始: ${totalRawConnections.toFixed(1)}</small>`;
+                                } else {
+                                    activeConnElement.innerHTML = `检测到连接<br>倒计时 ${limitTimer.toFixed(0)}s`;
+                                }
                             } else if (normalTimer > 0) {
                                 activeConnElement.innerHTML = `恢复倒计时<br>${normalTimer.toFixed(0)}s`;
                             } else {

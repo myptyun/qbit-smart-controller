@@ -826,6 +826,9 @@ class SpeedController:
             except Exception as e:
                 logger.error(f"❌ 采集设备 {device.get('name')} 失败: {e}")
         
+        # 保存原始连接数到控制器实例，供API使用
+        self.total_raw_connections = total_raw_connections
+        
         # 使用加权连接数进行限速判断，但保留原始连接数用于日志显示
         logger.info(f"📊 原始总连接数: {total_raw_connections:.1f}, 加权总连接数: {total_weighted_connections:.1f}")
         return total_weighted_connections
@@ -1008,7 +1011,8 @@ class SpeedController:
         return {
             "running": self.running,
             "is_limited": self.is_limited,
-            "total_connections": self.total_connections,
+            "total_connections": self.total_connections,  # 加权连接数
+            "total_raw_connections": getattr(self, 'total_raw_connections', self.total_connections),  # 原始连接数
             "limit_timer": self.limit_timer,
             "normal_timer": self.normal_timer,
             "last_action_time": self.last_action_time.isoformat() if self.last_action_time else None,
