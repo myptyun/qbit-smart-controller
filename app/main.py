@@ -519,18 +519,28 @@ class LuckyMonitor:
                             # 优先使用Remark字段作为服务名称，如果没有则使用Key字段
                             service_name = service_remark if service_remark else service_key
                             
+                            # 从statistics中获取实际连接数
+                            actual_connections = 0
+                            if "statistics" in data and rule_key in data["statistics"]:
+                                rule_stats = data["statistics"][rule_key]
+                                if "ProxyList" in rule_stats and service_key in rule_stats["ProxyList"]:
+                                    actual_connections = rule_stats["ProxyList"][service_key].get("Connections", 0)
+                            
+                            # 使用实际连接数，如果没有则使用ProxyList中的连接数
+                            final_connections = actual_connections if actual_connections > 0 else connections
+                            
                             # 无论连接数是否为0，都记录服务信息（用于状态控制）
                             connections_info.append({
                                 "rule_name": service_name,  # 使用Remark或Key作为服务名称
                                 "key": service_key,         # 保留Key字段作为技术标识符
                                 "remark": service_remark,   # 保留Remark字段
-                                "connections": connections,
+                                "connections": final_connections,
                                 "service_type": service_type,
                                 "enabled": enabled,
                                 "locations": locations,
-                                "status": "active" if connections > 0 else "inactive"
+                                "status": "active" if final_connections > 0 else "inactive"
                             })
-                            print(f"    📡 服务 {service_name} (Key: {service_key}): {connections} 个连接 (类型: {service_type})")
+                            print(f"    📡 服务 {service_name} (Key: {service_key}): {final_connections} 个连接 (类型: {service_type})")
             
             # 方法2: 兼容旧格式，直接从ProxyList中提取（备用方法）
             elif "ProxyList" in data and isinstance(data["ProxyList"], list):
