@@ -1,0 +1,37 @@
+{
+    "name": "SpeedHiveHome - qBittorrent智能控制器",
+    "short_name": "SpeedHiveHome",
+    "description": "基于Lucky软路由的智能qBittorrent限速控制系统",
+    "icons": [
+        {
+            "src": "/static/favicon-16x16.png",
+            "sizes": "16x16",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/favicon-32x32.png",
+            "sizes": "32x32",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#2563eb",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "start_url": "/",
+    "scope": "/"
+}
